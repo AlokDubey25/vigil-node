@@ -40,10 +40,8 @@ int main(){
     // Print best prices but using hasBuys and hasSells before calling
     if (book.hasBuys() && book.hasSells()){
         cout<< "Best bid: " << book.getBestBid() << "\n";
-        cout<< "Best ask: " << book.getBestask() << "\n";
-        cout<< "Spread:   "
-            << book.getBestAsk() - book.getBestBid()
-            << "\n";
+        cout<< "Best ask: " << book.getBestAsk() << "\n";
+        cout<< "Spread:   "<< book.getBestAsk() - book.getBestBid()<< "\n";
     }
 
     return 0;

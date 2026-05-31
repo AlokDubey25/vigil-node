@@ -30,7 +30,7 @@ private:
 
     // Convert price in rupees to paise key
     static long long toPaise(double price){
-        return static_cast<long long>(price * 100 + 0.5)
+        return static_cast<long long>(price * 100 + 0.5);
     }
 
 }; 
