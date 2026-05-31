@@ -1,7 +1,11 @@
-import logging, os
+import logging
+from pathlib import Path
+
+_ROOT = Path(__file__).resolve().parent.parent.parent
+_LOGS = _ROOT / "logs"
 
 def get_logger(name: str) -> logging.Logger:
-    os.makedirs("lobgs", exist_ok=True)
+    _LOGS.mkdir("lobgs", exist_ok=True)
     logger = logging.getLogger(name)
 
     if logger.handlers:
@@ -13,10 +17,16 @@ def get_logger(name: str) -> logging.Logger:
         datefmt = "%H:%M%S"
     )
 
-    fh = logging.FileHandler(f"logs/{name}.log")
+    fh = logging.FileHandler(_LOGS / f"{name}.log")
+    fh.setLevel(logging.DEBUG)
     fh.setFormatter(fmt)
+
+
     sh = logging.StreamHandler()
+    sh.setLevel(logging.INFO)
     sh.setFormatter(fmt)
+
+    
     logger.addHandler(fh)
     logger.addHandler(sh)
 
