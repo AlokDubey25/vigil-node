@@ -34,10 +34,10 @@ bool OrderBook::addOrder(const Order& order){
 }
     
 
-void OrderBOok::printBook() const{
+void OrderBook::printBook() const{
     cout << "\n=== ORDER BOOK ===\n";
 
-    cout<< "  SELL side (lowest ask first)\n"
+    cout<< "  SELL side (lowest ask first)\n";
     for (const auto& [key, order] : sellBook_){
         cout<< "  ASK  "
             << fixed << setprecision(2)
