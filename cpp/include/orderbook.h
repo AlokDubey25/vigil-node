@@ -3,6 +3,7 @@
 # include <functional>
 # include <string>
 # include "order.h"
+# include "trade.h"
 
 class OrderBook{
 public:
