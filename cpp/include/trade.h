@@ -2,7 +2,7 @@
 
 struct Trade{
     int tradeID = 0;
-    
+
     int buyOrderID = 0;
     int sellOrderID = 0;
 
@@ -12,6 +12,6 @@ struct Trade{
 
     long long timestamp = 0;
 
-    bool butFilled = false;
+    bool buyFilled = false;
     bool sellFilled = false;
 };
