@@ -10,6 +10,9 @@ public:
     bool addOrder(const Order& order);
     void printBook() const;
 
+    // its match engine which return trade like if trade is 0 then no match was possible
+    Trade matchOrders();
+
     // Return -1 if book side is empty as (Best price for both bidder and taker)
     long long getBestBid() const;
     long long getBestAsk() const;

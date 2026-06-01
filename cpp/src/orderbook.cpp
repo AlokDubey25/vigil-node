@@ -1,6 +1,9 @@
 # include "../include/orderbook.h"
+# include "../include/trade.h"
 # include <iostream>
 # include <iomanip>
+# include <algorithm>
+# include <ctime>
 using namespace std;
 
 bool OrderBook::addOrder(const Order& order){
@@ -83,4 +86,56 @@ bool OrderBook::hasBuys() const{
 }
 bool OrderBook::hasSells() const{
     return !sellBook_.empty();
+}
+
+Trade OrderBook::matchOrders(){
+    // its by default so if zero quantity or no match is there
+    Trade noMatch;
+
+    // if both side empty same as before but its imp to avoid error
+    if (!hasBuys() || !hasSells()) return noMatch;
+
+    long long bestBid = getBestBid();
+    long long bestAsk = getBestAsk();
+
+    // if ask is more than bid so no one able to by thats mean
+    if (bestBid < bestAsk) return noMatch;
+
+    // reference price always at first of each map
+    Order& buyOrder = buyBook_.begin() -> second;
+    Order& sellOrder = sellBook_.begin() -> second;
+
+    int tradeQty = min(buyOrder.quantity ,sellOrder.quantity); // basic logic
+
+    Trade t;
+    t.buyOrderID = buyOrder.orderID;
+    t.sellOrderID = sellOrder.orderID;
+    t.price = sellOrder.price;   
+    t.quantity = tradeQty;
+    t.timestamp = static_cast<long long>(time(nullptr));
+
+    cout<< "[Trade] " << buyOrder.userID
+        << "buys from " << sellOrder.userID
+        << "| qty: " << tradeQty
+        << "@ Rs. " 
+        << fixed << setprecision(2)
+        << sellOrder.price << "\n";
+
+
+    buyOrder.quantity -= tradeQty;
+    sellOrder.quantity -= tradeQty;
+
+    bool buyFilled = (buyOrder.quantity == 0);
+    bool sellFilled = (sellOrder.quantity == 0);
+
+    // so calller know what happend here so far
+    t.buyFilled = buyFilled;
+    t.sellFilled = sellFilled;
+
+    // to erase fully consumed order form book
+    if (buyFilled) buyBook_.erase(buyBook_.begin());
+    if (sellFilled) sellBook_.erase(sellBook_.begin());
+
+    return t;  // here t qty > 0 tells caller a trade happend
+
 }

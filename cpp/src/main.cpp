@@ -2,6 +2,7 @@
 # include <ctime>
 # include "../include/order.h"
 # include "../include/orderbook.h"
+# include "../include/trade.h"
 using namespace std;
 
 int main(){
@@ -21,6 +22,7 @@ int main(){
         return o;
     };
     
+    // _________HERE WE INSERTED ORDERS FOR NOW BEING____________
     // Inseting 3 BUY orders for now
     book.addOrder(makeOrder(1, "I1001", 101.50, 10, "BUY"));
     book.addOrder(makeOrder(2, "I1002", 100.00, 5, "BUY"));
@@ -37,12 +39,30 @@ int main(){
     // Printing it...
     book.printBook();
 
-    // Print best prices but using hasBuys and hasSells before calling
-    if (book.hasBuys() && book.hasSells()){
-        cout<< "Best bid: " << book.getBestBid() << "\n";
-        cout<< "Best ask: " << book.getBestAsk() << "\n";
-        cout<< "Spread:   "<< book.getBestAsk() - book.getBestBid()<< "\n";
+    // continuous loop to match the trade...
+
+    int tradeCount = 0;
+    cout<< " MATCHING ENGINE RUNNING\n";
+    
+    while (book.hasBuys() && book.hasSells()){
+        // check spread every times not just for starting
+        if (book.hasBuys() < book.hasSells()){
+            cout<< "[ENGINE] spread positive - no more matches\n";
+            break;
+        }
+
+        Trade t = book.matchOrders();
+
+        if (t.quantity == 0) break;
+
+        tradeCount++;
     }
+
+    cout<< "\n[ENGINE] session done for now... trades execuded successfully as: "
+        << tradeCount << "\n";
+
+    cout<< "\n BOOK AFTER MATCHING\n";
+    book.printBook();
 
     return 0;
 } 
