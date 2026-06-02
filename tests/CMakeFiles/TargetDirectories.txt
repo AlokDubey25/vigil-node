@@ -1,0 +1,5 @@
+/mnt/c/Users/JUST_ALOK/vigil-node/tests/CMakeFiles/vigil.dir
+/mnt/c/Users/JUST_ALOK/vigil-node/tests/CMakeFiles/test_orderbook.dir
+/mnt/c/Users/JUST_ALOK/vigil-node/tests/CMakeFiles/test.dir
+/mnt/c/Users/JUST_ALOK/vigil-node/tests/CMakeFiles/edit_cache.dir
+/mnt/c/Users/JUST_ALOK/vigil-node/tests/CMakeFiles/rebuild_cache.dir

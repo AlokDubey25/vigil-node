@@ -42,27 +42,24 @@ int main(){
     // continuous loop to match the trade...
 
     int tradeCount = 0;
-    cout<< " MATCHING ENGINE RUNNING\n";
-    
-    while (book.hasBuys() && book.hasSells()){
-        // check spread every times not just for starting
-        if (book.hasBuys() < book.hasSells()){
-            cout<< "[ENGINE] spread positive - no more matches\n";
+    cout << "MATCHING ENGINE RUNNING\n";
+
+    while (book.hasBuys() && book.hasSells()) {
+        if (book.getBestBid() < book.getBestAsk()) {
+            cout << "[ENGINE]-positive : No more matches possible\n";
             break;
         }
-
-        Trade t = book.matchOrders();
-
-        if (t.quantity == 0) break;
-
-        tradeCount++;
+        Trade executed_trade = book.matchOrders();
+        if (executed_trade.quantity > 0) {
+            tradeCount++;
+        } else {
+            break; 
+        }
     }
-
     cout<< "\n[ENGINE] session done for now... trades execuded successfully as: "
         << tradeCount << "\n";
 
     cout<< "\n BOOK AFTER MATCHING\n";
     book.printBook();
 
-    return 0;
-} 
+}

@@ -35,7 +35,7 @@ TEST_CASE("addOrder rejects invalid input"){
         REQUIRE(book.addOrder(make(4,"U1", 100.0, 10, "HOLD")) == false);
     }
     SECTION("valid Order Accepted"){
-        REQUIRE(book.addOrder(make(5,"U1", -5.0, 10, "BUY")) == true);
+        REQUIRE(book.addOrder(make(5,"U1", 5.0, 10, "BUY")) == true);
     }
 }
 
@@ -53,7 +53,7 @@ TEST_CASE("order book sorts correcrtly"){
         book.addOrder(make(4, "U4", 103.0, 10, "SELL"));
         book.addOrder(make(5, "U5", 101.5, 5, "SELL"));
         book.addOrder(make(6, "U6", 102.0, 8, "SELL"));
-        REQUIRE(book.getBestBidPrice() == Approx(101.5));
+        REQUIRE(book.getBestAskPrice() == Approx(101.5));
     }
 }
 
@@ -63,13 +63,15 @@ TEST_CASE("matchOrders executes correctly"){
         OrderBook book;
         book.addOrder(make(1,"U1",100.0,10,"BUY"));
         book.addOrder(make(2,"U2",101.0,10,"SELL"));
-        REQUIRE(book.matchOrders() == false);
+        Trade result = book.matchOrders();
+        REQUIRE(result.quantity == 0);
     }
     SECTION("match fires when bid >= ask") {
         OrderBook book;
         book.addOrder(make(1,"U1",103.0,10,"BUY"));
         book.addOrder(make(2,"U2",102.0,10,"SELL"));
-        REQUIRE(book.matchOrders() == true);
+        Trade result = book.matchOrders();
+        REQUIRE(result.quantity > 0);
     }
     SECTION("full fill remove both orders") {
         OrderBook book;
@@ -89,7 +91,7 @@ TEST_CASE("matchOrders executes correctly"){
     }
     SECTION("partially fill : seller has remainder") {
         OrderBook book;
-        book.addOrder(make(1,"U1",100.0,10,"BUY"));
+        book.addOrder(make(1,"U1",102.0,10,"BUY"));
         book.addOrder(make(2,"U2",101.0,10,"SELL"));
         book.matchOrders();
         REQUIRE(book.hasBuys() == false);
@@ -101,7 +103,8 @@ TEST_CASE("matchOrders executes correctly"){
 TEST_CASE("empty book edge cases"){
     OrderBook book;
     SECTION("matchOrders on empty book return false"){
-        REQUIRE(book.matchOrders() == false);
+        Trade result = book.matchOrders();
+        REQUIRE(result.quantity == 0);
     }
     SECTION("getBestBid return -1 when empty"){
         REQUIRE(book.getBestBid() == -1);
