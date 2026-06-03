@@ -121,7 +121,7 @@ bool DatabaseHandler::saveRiskEvent(
     const char* sql =
         "INSERT INTO risk_log"
         " (userID, orderID, fraudScore, reason, action, timestamp)"
-        "VALUES (?,?,?,?,?)";
+        "VALUES (?,?,?,?,?,?)";
 
     int rc = sqlite3_prepare_v2(db_, sql, -1, &stmt, nullptr);
     if (rc != SQLITE_OK){
@@ -143,9 +143,9 @@ bool DatabaseHandler::saveRiskEvent(
 }
 
 
-bool DatabaseHandler::updateOrderStatus(int orderID, const sting& status){
+bool DatabaseHandler::updateOrderStatus(int orderID, const string& status){
     sqlite3_stmt* stmt = nullptr;
-    const char* sql = "UPADATE orders SET status=? WHERE orderID=?";
+    const char* sql = "UPDATE orders SET status=? WHERE orderID=?";
 
     int rc = sqlite3_prepare_v2(db_, sql, -1, &stmt, nullptr);
     if (rc != SQLITE_OK){
