@@ -14,6 +14,9 @@ DatabaseHandler::DatabaseHandler(const string& dbPath){
     }
 
     cout<< "[DB] Opneed: " << dbPath << "\n";
+
+    // Turning Foreign key ON to avoid confusion of not existing rows
+    execSQL("PRAGMA foreign_keys = ON;");
     createTables();
 }
 
@@ -73,5 +76,88 @@ bool DatabaseHandler::createTables(){
 
     bool ok = execSQL(sql);
     if (ok) cout << "[DB] Tables ready. \n";
+    return ok;
+}
+
+bool DatabaseHandler::saveTrade(const Trade& t){
+    sqlite3_stmt* stmt = nullptr;
+
+    // tradeID is AUTOINCREMENT so no need to insert
+    const char* sql =
+        "INSERT INTO trades"
+        " (buyOrderID, sellOrderID, price, quantity, timestamp)"
+        "VALUES (?,?,?,?,?)";
+
+    int rc = sqlite3_prepare_v2(db_, sql, -1, &stmt, nullptr);
+    if (rc != SQLITE_OK){
+        cerr<< "[DB] saveTrade prepare: " << sqlite3_errmsg(db_)<< "\n";
+        return false;
+    }
+
+    sqlite3_bind_int    (stmt, 1, t.buyOrderID);
+    sqlite3_bind_int    (stmt, 2, t.sellOrderID);
+    sqlite3_bind_double (stmt, 3, t.price);
+    sqlite3_bind_int    (stmt, 4, t.quantity);
+    sqlite3_bind_int64  (stmt, 5, t.timestamp);
+
+    rc = sqlite3_step(stmt);
+    bool ok = (rc == SQLITE_DONE);
+    if (!ok){
+        cerr<< "[DB] saveTrade step: "<< sqlite3_errmsg(db_)<< "\n";
+    }
+
+    sqlite3_finalize(stmt);
+    return ok;
+}
+
+
+bool DatabaseHandler::saveRiskEvent(
+    const string& userID, int orderID,
+    double score,
+    const string& reason,
+    const string& action)
+{
+    sqlite3_stmt* stmt = nullptr;
+    const char* sql =
+        "INSERT INTO risk_log"
+        " (userID, orderID, fraudScore, reason, action, timestamp)"
+        "VALUES (?,?,?,?,?)";
+
+    int rc = sqlite3_prepare_v2(db_, sql, -1, &stmt, nullptr);
+    if (rc != SQLITE_OK){
+        cerr<< "[DB] saveRiskEvent prepare: "<< sqlite3_errmsg(db_)<<"\n";
+        return false;
+    }
+
+    sqlite3_bind_text   (stmt, 1, userID.c_str(), -1, SQLITE_TRANSIENT);
+    sqlite3_bind_int    (stmt, 2, orderID);
+    sqlite3_bind_double (stmt, 3, score);
+    sqlite3_bind_text   (stmt, 4 ,reason.c_str(), -1, SQLITE_TRANSIENT);
+    sqlite3_bind_text   (stmt, 5, action.c_str(), -1, SQLITE_TRANSIENT);
+    sqlite3_bind_int64  (stmt, 6, static_cast<long long>(time(nullptr)));
+
+    rc = sqlite3_step(stmt);
+    bool ok = (rc == SQLITE_DONE);
+    sqlite3_finalize(stmt);
+    return ok;
+}
+
+
+bool DatabaseHandler::updateOrderStatus(int orderID, const sting& status){
+    sqlite3_stmt* stmt = nullptr;
+    const char* sql = "UPADATE orders SET status=? WHERE orderID=?";
+
+    int rc = sqlite3_prepare_v2(db_, sql, -1, &stmt, nullptr);
+    if (rc != SQLITE_OK){
+        cerr<< "[DB] updateStatus prepare: "<< sqlite3_errmsg(db_)<< "\n";
+        return false;
+    }
+
+    sqlite3_bind_text(stmt, 1, status.c_str(), -1, SQLITE_TRANSIENT);
+    sqlite3_bind_int (stmt, 2, orderID);
+
+    rc = sqlite3_step(stmt);
+    bool ok = (rc == SQLITE_DONE);
+    sqlite3_finalize(stmt);
     return ok;
 }
