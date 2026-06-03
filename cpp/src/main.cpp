@@ -3,9 +3,17 @@
 # include "../include/order.h"
 # include "../include/orderbook.h"
 # include "../include/trade.h"
+# include "../include/database.h"
 using namespace std;
 
 int main(){
+    // so data enter first and after rescan it continue to engine 
+    DatabaseHandler db("vigil.db");
+    if (!db.isOpen()){
+        cerr<< "[FATAL] Database conncetion failded... Shutting down.\n";
+        return 1;
+    }
+    
     OrderBook book;
 
     auto makeOrder = [](int id, const string& user,
