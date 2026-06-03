@@ -13,7 +13,7 @@ public:
     ~DatabaseHandler();
 
     // First check if db conncetion is open and healthy
-    bool isOpen() const { return db_ != nullptr};
+    bool isOpen() const { return db_ != nullptr;}        // prreviously it was like nullptr}; which made semicolon outside of isOpen
 
     bool createTables();
 
