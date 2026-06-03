@@ -44,7 +44,8 @@ int main(){
     book.addOrder(makeOrder(6, "I1006", -50.0, 1, "BUY"));
     book.addOrder(makeOrder(7, "", 100.0, 1, "BUY"));
 
-    // Printing it...
+    // Printing it... before matching
+    cout<< "\nBOOK BEFORE MATCHING\N"
     book.printBook();
 
     // continuous loop to match the trade...
@@ -58,16 +59,26 @@ int main(){
             break;
         }
         Trade executed_trade = book.matchOrders();
-        if (executed_trade.quantity > 0) {
-            tradeCount++;
-        } else {
+        if (executed_trade.quantity == 0) {
             break; 
         }
+        tradeCount++;
+
+        if (!db.saveTrade(t)){
+            cerr<< "[WARN] trade not saved to DB\n";
+        }
+   
+        // pull it out if its fully consumed or pending for partial fills 
+        if (t.buyFilled)  db.updateOrderStatus(t.buyOrderID, "FILLED");
+        if (t.sellFilled) db.updateOrderStatus(t.sellOrderID, "FILLED");
     }
+
     cout<< "\n[ENGINE] session done for now... trades execuded successfully as: "
         << tradeCount << "\n";
 
     cout<< "\n BOOK AFTER MATCHING\n";
     book.printBook();
+
+    return 0;  // destructor file here when db is closed
 
 }
