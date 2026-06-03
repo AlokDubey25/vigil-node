@@ -26,9 +26,9 @@ DatabaseHandler::~DatabaseHandler(){
 
 bool DatabaseHandler::execSQL(const string& sql){
     char* errMsg = nullptr;
-    int rc = sqlite3_exec(db_, sql.c_str, nullptr, nullptr, &errMsg);
+    int rc = sqlite3_exec(db_, sql.c_str(), nullptr, nullptr, &errMsg);     // here was error as sql.c_str is a function pointer. It needs to be sql.c_str()
 
-    if (rc!= SQLITE3_OK){
+    if (rc!= SQLITE_OK){                                                    // its SQLITE_OK not SQLITE3_OK
         cerr << "[DB] SQL error: " << errMsg << "\n";
         sqlite3_free(errMsg);
         return false;
@@ -67,7 +67,7 @@ bool DatabaseHandler::createTables(){
             reason      TEXT    NOT NULL,
             action      TEXT    NOT NULL,
             timestamp   INTEGER NOT NULL,
-            FOREIGN KEY (orderID) REFERENCES order(orderID)
+            FOREIGN KEY (orderID) REFERENCES orders(orderID)               // theres s in orders which i missed
         );
     )SQL";  
 

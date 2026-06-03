@@ -44,7 +44,7 @@ set_source_files_properties(cpp/vendor/sqlite3.c
     cpp/include tests/cpp)
 set_source_files_properties(cpp/vendor/sqlite3.c 
     PROPERTIES COMPILE_FLAGS "-w")
-target_link_libraries(test_orderbook Threads::THreads)
+target_link_libraries(test_orderbook Threads::Threads)
 
 
 # 4. CTest integration to model
