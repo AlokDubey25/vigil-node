@@ -161,3 +161,36 @@ bool DatabaseHandler::updateOrderStatus(int orderID, const string& status){
     sqlite3_finalize(stmt);
     return ok;
 }
+
+
+// Now this is to read blacklisted users using SQLITE_ROW loops
+vector<string> DatabaseHandler::loadBlacklist(){
+    vector<string> blocked;
+
+    if (!db_) return blocked;   // DB not open - nothing to load 
+
+    //every user with permananet_block entry and distinct - we only get them once
+    const char* sql = nullptr;
+    int rc = sqlite3_prepare_v2(db_, sql, -1, &stmt, nullptr);
+    if (rc != SQLITE_OK){
+        cerr<< "[DB] loadBlacklist prepare: "
+            << sqlite3_errmsg(db_) << "\n";
+        return blocked;    
+    }
+        // loop sqlite3_step until it stops by providing rows to us
+    while (sqlite3_step(stmt) == SQLITE_ROW){
+        // clmn index is 0 (opposite of bind which is 1)
+        const unsigned char* raw = sqlite3_column_text(stmt, 0);
+        if (raw){
+            // convert uchar* -> char* here...
+            blocked.emplace_back(reinterpret_cast<const char*>(raw));
+        }
+    }
+        
+    sqlite3_finalize(stmt);
+    cout<< "[DB] loaded " << blocked.size()
+        << " permanently blocked users\n";
+
+    return blocked;
+    
+}
