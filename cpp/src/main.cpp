@@ -45,7 +45,7 @@ int main(){
     book.addOrder(makeOrder(7, "", 100.0, 1, "BUY"));
 
     // Printing it... before matching
-    cout<< "\nBOOK BEFORE MATCHING\N"
+    cout<< "\nBOOK BEFORE MATCHING\n";
     book.printBook();
 
     // continuous loop to match the trade...
@@ -58,8 +58,8 @@ int main(){
             cout << "[ENGINE]-positive : No more matches possible\n";
             break;
         }
-        Trade executed_trade = book.matchOrders();
-        if (executed_trade.quantity == 0) {
+        Trade t = book.matchOrders();
+        if (t.quantity == 0) {
             break; 
         }
         tradeCount++;
