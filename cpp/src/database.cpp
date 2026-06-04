@@ -70,7 +70,7 @@ bool DatabaseHandler::createTables(){
             reason      TEXT    NOT NULL,
             action      TEXT    NOT NULL,
             timestamp   INTEGER NOT NULL,
-            FOREIGN KEY (orderID) REFERENCES orders(orderID)               // theres s in orders which i missed
+            FOREIGN KEY (orderID) REFERENCES orders(orderID)               -- theres s in orders which i missed
         );
     )SQL";  
 
