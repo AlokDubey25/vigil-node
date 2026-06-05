@@ -169,7 +169,9 @@ vector<string> DatabaseHandler::loadBlacklist(){
 
     if (!db_) return blocked;   // DB not open - nothing to load 
 
-    //every user with permananet_block entry and distinct - we only get them once
+
+    sqlite3_stmt* stmt = nullptr;
+    
     const char* sql = nullptr;
     int rc = sqlite3_prepare_v2(db_, sql, -1, &stmt, nullptr);
     if (rc != SQLITE_OK){
