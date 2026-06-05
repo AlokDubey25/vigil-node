@@ -113,3 +113,4 @@ TEST_CASE("empty book edge cases"){
         REQUIRE(book.getBestAsk() == -1);
     }
 }
+
