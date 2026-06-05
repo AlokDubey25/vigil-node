@@ -8,6 +8,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 include_directories(cpp/include)
 
+
 # 1. Main Engine binary
 add_executable(vigil 
     cpp/src/main.cpp 
@@ -44,9 +45,10 @@ target_include_directories(test_orderbook PRIVATE       # check this later
 #     cpp/include tests/cpp)
 # set_source_files_properties(cpp/vendor/sqlite3.c 
 #     PROPERTIES COMPILE_FLAGS "-w")
-# target_link_libraries(test_orderbook Threads::Threads)
+target_link_libraries(test_orderbook Threads::Threads)
 
 
 # 4. CTest integration to model
 enable_testing()
 add_test(NAME orderbook_tests COMMAND test_orderbook)
+add_test(NAME database_tests COMMAND test_database)
