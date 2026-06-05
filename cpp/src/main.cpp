@@ -14,6 +14,19 @@ int main(){
         return 1;
     }
     
+    // load previously blocked users 
+    auto blacklist = db.loadBlacklist();
+    if (!blacklist.empty()){
+        cout<< "[ENIGINE]" << blacklist.size()
+            << " users on permanent blacklist\n";
+        for (const auto& uid : blacklist){
+            cout<< "  blocked:  " << uid << "\n";
+        }
+    }else{
+        cout<< "[ENGINE] no blocked users on record as per last data\n";
+    }
+
+    
     OrderBook book;
 
     auto makeOrder = [](int id, const string& user,
