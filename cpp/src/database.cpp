@@ -103,12 +103,17 @@ bool DatabaseHandler::saveTrade(Trade& t){
     sqlite3_bind_int64  (stmt, 5, t.timestamp);
 
     rc = sqlite3_step(stmt);
+
     bool ok = (rc == SQLITE_DONE);
     if (!ok){
         // grab the tradeID the DB just assigned
         t.tradeID = static_cast<int>(sqlite3_last_insert_rowid(db_));
+        sqlite3_finalize(stmt);
+        return true;
     }else{
         cerr<< "[DB] saveTrade step failded: "<< sqlite3_errmsg(db_)<< "\n";
+        sqlite3_finalize(stmt);
+        return false;
     }
 
     sqlite3_finalize(stmt);
@@ -200,4 +205,37 @@ vector<string> DatabaseHandler::loadBlacklist(){
 
     return blocked;
     
+}
+
+bool DatabaseHandler::saveOrder(const Order& order) {
+    sqlite3_stmt* stmt = nullptr;
+    const char* sql = 
+        "INSERT INTO orders (orderID, userID, price, quantity, side, timestamp, status, blockScore, fraudFlag)"
+        " VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?);";
+
+    int rc = sqlite3_prepare_v2(db_, sql, -1, &stmt, nullptr);
+    if (rc != SQLITE_OK) {
+        cerr << "[DB] saveOrder prepare error: " << sqlite3_errmsg(db_) << "\n";
+        return false;
+    }
+
+    sqlite3_bind_int   (stmt, 1, order.orderID);
+    sqlite3_bind_text  (stmt, 2, order.userID.c_str(), -1, SQLITE_TRANSIENT);
+    sqlite3_bind_double(stmt, 3, order.price);
+    sqlite3_bind_int   (stmt, 4, order.quantity);
+    sqlite3_bind_text  (stmt, 5, order.side.c_str(), -1, SQLITE_TRANSIENT);
+    sqlite3_bind_int64 (stmt, 6, order.timestamp);
+    sqlite3_bind_text  (stmt, 7, order.status.c_str(), -1, SQLITE_TRANSIENT);
+    sqlite3_bind_double(stmt, 8, order.blockScore);
+    sqlite3_bind_int   (stmt, 9, order.fraudFlag);
+
+    rc = sqlite3_step(stmt);
+    bool ok = (rc == SQLITE_DONE);
+
+    if (!ok) {
+        cerr << "[DB] saveOrder step error: " << sqlite3_errmsg(db_) << "\n";
+    }
+
+    sqlite3_finalize(stmt);
+    return ok;
 }

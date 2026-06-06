@@ -53,7 +53,7 @@ TEST_CASE("saveOrder writes a row successfully"){
         REQUIRE(db.saveOrder(mkOrder(2, "I1002", 101.0, 5, "SELL")) == true);
     }
     SECTION("duplicate orderID fails (PRIMARY KEY constraint)"){
-        db,saveOrder(mkOrder(1, "I1001", 100.0, 10, "BUY"));
+        db.saveOrder(mkOrder(1, "I1001", 100.0, 10, "BUY"));
         REQUIRE(db.saveOrder(mkOrder(1, "I999", 200.0, 5, "SELL")) == false);
     }
 }

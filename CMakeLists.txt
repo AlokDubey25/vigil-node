@@ -30,6 +30,7 @@ target_link_libraries(vigil Threads::Threads)
 target_include_directories(vigil PRIVATE cpp/include)
 
 # 3. Test Binary
+# Test orderbook
 add_executable(test_orderbook
     tests/cpp/test_orderbook.cpp
     cpp/src/orderbook.cpp
@@ -40,6 +41,19 @@ target_include_directories(test_orderbook PRIVATE       # check this later
     cpp/include
     tests/cpp 
 )
+
+# Test database
+add_executable(test_database
+    tests/cpp/test_database.cpp
+    cpp/src/database.cpp
+    cpp/vendor/sqlite3.c
+)
+
+target_include_directories(test_database PRIVATE       # check this later
+    cpp/include
+    tests/cpp 
+)
+
 
 # set_source_files_properties(cpp/vendor/sqlite3.c 
 #     cpp/include tests/cpp)
