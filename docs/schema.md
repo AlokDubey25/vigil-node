@@ -1,4 +1,3 @@
-<! Copied directly from source >
 ## orders
 
 Every order that enters the engine gets one row here.

@@ -18,7 +18,7 @@ public:
     bool createTables();
 
     bool saveOrder(const Order& order);             // write in db
-    bool saveTrade(const Trade& trade);
+    bool saveTrade(Trade& trade);
     bool saveRiskEvent(const string & userID,
                         int orderID,
                         double score,
