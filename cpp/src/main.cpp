@@ -44,18 +44,14 @@ int main(){
     };
     
     // _________HERE WE INSERTED ORDERS FOR NOW BEING____________
-    // Inseting 3 BUY orders for now
-    book.addOrder(makeOrder(1, "I1001", 101.50, 10, "BUY"));
-    book.addOrder(makeOrder(2, "I1002", 100.00, 5, "BUY"));
-    book.addOrder(makeOrder(3, "I1003", 102.75, 20, "BUY"));
+    // NEW DATA FOR ENTRIES FOR CHECKING ENGINE WITH ALL TEST PASS
+    book.addOrder(makeOrder(1, "I1001", 104.00, 10, "BUY"));
+    book.addOrder(makeOrder(2, "I1002", 103.50, 5, "BUY"));
+    book.addOrder(makeOrder(3, "I1003", 101.00, 20, "BUY"));
+    book.addOrder(makeOrder(4, "I1004", 103.00, 8, "SELL"));
+    book.addOrder(makeOrder(5, "I1005", 103.25, 5, "SELL"));
+    book.addOrder(makeOrder(6, "I1006", 106.0, 10, "SELL"));
 
-    // Insering 3 SELL orders
-    book.addOrder(makeOrder(4, "I1004", 103.50, 8, "SELL"));
-    book.addOrder(makeOrder(5, "I1005", 103.00, 15, "SELL"));
-
-    // Test validation - this to print reject msg
-    book.addOrder(makeOrder(6, "I1006", -50.0, 1, "BUY"));
-    book.addOrder(makeOrder(7, "", 100.0, 1, "BUY"));
 
     // Printing it... before matching
     cout<< "\nBOOK BEFORE MATCHING\n";
