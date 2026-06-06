@@ -16,7 +16,9 @@ DatabaseHandler::DatabaseHandler(const string& dbPath){
     cout<< "[DB] Opneed: " << dbPath << "\n";
 
     // Turning Foreign key ON to avoid confusion of not existing rows
-    execSQL("PRAGMA foreign_keys = ON;");
+    execSQL("PRAGMA journal_mode = WAL;");               // concurrent reads + writes
+    execSQL("PRAGMA synchronous = NORMAL;");            // safe but faster than full
+    execSQL("PRAGMA foreign_keys = ON;");              // already there from before
     createTables();
 }
 
@@ -79,7 +81,7 @@ bool DatabaseHandler::createTables(){
     return ok;
 }
 
-bool DatabaseHandler::saveTrade(const Trade& t){
+bool DatabaseHandler::saveTrade(Trade& t){
     sqlite3_stmt* stmt = nullptr;
 
     // tradeID is AUTOINCREMENT so no need to insert
@@ -103,7 +105,10 @@ bool DatabaseHandler::saveTrade(const Trade& t){
     rc = sqlite3_step(stmt);
     bool ok = (rc == SQLITE_DONE);
     if (!ok){
-        cerr<< "[DB] saveTrade step: "<< sqlite3_errmsg(db_)<< "\n";
+        // grab the tradeID the DB just assigned
+        t.tradeID = static_cast<int>(sqlite3_last_insert_rowid(db_));
+    }else{
+        cerr<< "[DB] saveTrade step failded: "<< sqlite3_errmsg(db_)<< "\n";
     }
 
     sqlite3_finalize(stmt);
@@ -172,7 +177,7 @@ vector<string> DatabaseHandler::loadBlacklist(){
 
     sqlite3_stmt* stmt = nullptr;
     
-    const char* sql = nullptr;
+    const char* sql = "SELECT DISTINCT userID FROM orders WHERE fraudFlag = 1";
     int rc = sqlite3_prepare_v2(db_, sql, -1, &stmt, nullptr);
     if (rc != SQLITE_OK){
         cerr<< "[DB] loadBlacklist prepare: "
