@@ -9,24 +9,23 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 include_directories(cpp/include)
 
 
-# 1. Main Engine binary
-add_executable(vigil 
-    cpp/src/main.cpp 
-    cpp/src/orderbook.cpp
-    cpp/src/database.cpp
-    cpp/vendor/sqlite3.c 
-)
-
 # sqlite3.c uses POSIX APIs - supress its internal warnings
 set_source_files_properties(cpp/vendor/sqlite3.c 
     PROPERTIES COMPILE_FLAGS "-w")
 
 # Link pthreads (req by SQLite on LINUX)
 find_package(Threads REQUIRED)
+
+# Main Engine binary
+add_executable(vigil 
+    cpp/src/main.cpp 
+    cpp/src/orderbook.cpp
+    cpp/src/database.cpp
+    cpp/vendor/sqlite3.c 
+)
 target_link_libraries(vigil Threads::Threads)
 
-
-# 2. Map the include directory for header files
+# Map the include directory for header files
 target_include_directories(vigil PRIVATE cpp/include)
 
 # 3. Test Binary
@@ -42,7 +41,7 @@ target_include_directories(test_orderbook PRIVATE       # check this later
     tests/cpp 
 )
 
-# Test database
+# Test database 
 add_executable(test_database
     tests/cpp/test_database.cpp
     cpp/src/database.cpp
@@ -55,10 +54,6 @@ target_include_directories(test_database PRIVATE       # check this later
 )
 
 
-# set_source_files_properties(cpp/vendor/sqlite3.c 
-#     cpp/include tests/cpp)
-# set_source_files_properties(cpp/vendor/sqlite3.c 
-#     PROPERTIES COMPILE_FLAGS "-w")
 target_link_libraries(test_orderbook Threads::Threads)
 
 
