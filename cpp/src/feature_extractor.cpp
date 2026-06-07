@@ -61,15 +61,15 @@ double FeatureExtractor::calcPriceDeviation(const Order& current, double midPric
 double FeatureExtractor::calcCancelRate(const string& userID, int totalOrders) const{
     if (totalOrders == 0) return 0.0;
 
-    // cacel count might not have an entry for this user
-    auto it = cancelCount_.find(userID);
-    if (it == cancelCount_.end()) return 0.0;
+    // cacelcount_ might not have an entry for this user
+    auto it = cancelCount.find(userID);
+    if (it == cancelCount.end()) return 0.0;
 
     return static_cast<double>(it->second) / totalOrders;
 }
 
 // Fourth feature :- size ratio :- its 1.0 means exactly average , 5.0 means 5x bigger thna usual and so on...
-double FeatureExtractor::calcSizeRatio(const Order& current; const deque<Order>& orders) const{
+double FeatureExtractor::calcSizeRatio(const Order& current, const deque<Order>& orders) const{
     if (orders.empty()) return 1.0;    
 
     double total = 0.0;
@@ -101,7 +101,7 @@ double FeatureExtractor::calcTimeBetween(const deque<Order>& orders) const{
 }
 
 // Sixth feature :- repeat price rate , when price matches current order price then high val = always placing orders at same level 
-double FeatureExtractor::calcRepeatPriceRate(const Order& current, count deque<Order>& orders) const{
+double FeatureExtractor::calcRepeatPriceRate(const Order& current, const deque<Order>& orders) const{
     if (orders.empty()) return 0.0;
 
     // compare using paise to avoid float comparison issue

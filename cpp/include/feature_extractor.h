@@ -25,13 +25,14 @@ struct FeatureVector{
     }
 
     void print(const string& userID) const{
-        cout<< "[FV]" << userID
-            << "vel = "     << velocity
-            << "pdev = "    << priceDeviation
-            << "create = "  << cancelRate
-            << "sratio = "  << sizeRatio
-            << "tbetween = "<< timeBetween
-            << "rpprice = " << repeatPriceRate
+        cout<< "[FV] " << userID
+            << fixed   << setprecision(3)
+            << " vel="     << velocity
+            << " pdev="    << priceDeviation
+            << " create="  << cancelRate
+            << " sratio="  << sizeRatio
+            << " tbetween="<< timeBetween
+            << " rpprice=" << repeatPriceRate
             << "\n";
     }
 
