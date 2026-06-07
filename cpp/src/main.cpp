@@ -29,6 +29,7 @@ int main(){
 
     
     OrderBook book;
+    FeatureExtractor extractor;
 
     auto makeOrder = [](int id, const string& user,
                         double price, int qty,
@@ -63,7 +64,7 @@ int main(){
 
         // 04. add to order book
         book.addOrder(o);
-    }
+    };
 
     cout<< "\n   Inserting orders + extracting features   \n";
     
@@ -89,14 +90,13 @@ int main(){
 
     while (book.hasBuys() && book.hasSells()) {
         if (book.getBestBid() < book.getBestAsk()) {
-            cout << "[ENGINE]-positive : No more matches possible\n";
             break;
         }
         Trade t = book.matchOrders();
         if (t.quantity == 0) {
             break; 
         }
-        db.saveTrade(t)
+        db.saveTrade(t);
    
         // pull it out if its fully consumed or pending for partial fills 
         if (t.buyFilled)  db.updateOrderStatus(t.buyOrderID, "FILLED");
@@ -106,7 +106,7 @@ int main(){
 
     cout<< "\n[ENGINE] session done for now... trades execuded successfully as: "
         << tradeCount << "\n";
-        
+
     return 0;  // destructor file here when db is closed
 
 }
