@@ -53,12 +53,19 @@ target_include_directories(test_database PRIVATE       # check this later
     cpp/include
     tests/cpp 
 )
-
-
 target_link_libraries(test_orderbook Threads::Threads)
+
+
+# Test features
+add_executable(test_features
+    tests/cpp/test_features.cpp 
+    cpp/src/feature_extractor.cpp 
+)
+target_include_directories(test_features PRIVATE cpp/include tests/cpp)
 
 
 # 4. CTest integration to model
 enable_testing()
 add_test(NAME orderbook_tests COMMAND test_orderbook)
-add_test(NAME database_tests COMMAND test_database)
+add_test(NAME database_tests  COMMAND test_database)
+add_test(NAME feature_tests   COMMAND test_features) 

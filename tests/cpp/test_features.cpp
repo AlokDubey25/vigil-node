@@ -41,7 +41,7 @@ TEST_CASE("velocity counts orders within 60-second window"){
             ex.extract(mk(i+1, "I1", 100.0, 10, "BUY", BASE + i*10), 0.0);
 
         // 6th order at BASE+50 - all 5 previous are within 60s
-        FeatureVector fv = ex.extract(mk(6,"I1",100.0,10."BUY", BASE+50), 0.0);
+        FeatureVector fv = ex.extract(mk(6,"I1",100.0, 10, "BUY", BASE+50), 0.0);
 
         REQUIRE(fv.velocity == Approx(5.0));
     }
@@ -134,7 +134,7 @@ TEST_CASE("timeBetween calculates average gap between orders"){
 
     SECTION("omly one order in history returns 0"){
         FeatureExtractor ex;
-        ex.extract(mk(1,'I1', 100.0, 10, "BUY", BASE), 0.0);
+        ex.extract(mk(1,"I1", 100.0, 10, "BUY", BASE), 0.0);
         // history has 1 item - can;t compute a gap, returns 0
         FeatureVector fv = ex.extract(mk(2,"I1", 100.0, 10, "BUY", BASE+10), 0.0);
 
@@ -153,7 +153,7 @@ TEST_CASE("repeatPriceRate measures how often same price appears"){
         ex.extract(mk(3, "I1", 100.0, 10, "BUY", BASE+2),   0.0);
         ex.extract(mk(4, "I1", 105.0, 10, "BUY", BASE+3),   0.0);
         // 5th order at 100.0 - 2 of 4 history entries match = 0.5
-        FeatureVector fv = ex.extract(mk(5, "I1", 100.0, 10, "BUY", BASE+4). 0.0);
+        FeatureVector fv = ex.extract(mk(5, "I1", 100.0, 10, "BUY", BASE+4), 0.0);
 
         REQUIRE(fv.repeatPriceRate == Approx(0.5));
     }
