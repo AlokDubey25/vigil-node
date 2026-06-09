@@ -1,5 +1,7 @@
 # include "../include/feature_extractor.h"
 # include <cmath>
+# include <sstream>
+# include <algorithm>
 using namespace std;
 
 // first extract for main method
@@ -29,6 +31,15 @@ FeatureVector FeatureExtractor::extract(const Order& order, double midPrice){
     if (static_cast<int>(window.size()) > WINDOW_SIZE){
         window.pop_front();
     }
+
+
+    // these numbers are fenerous to maximize as real fraud rarely  exceeds them
+    fv.velocity         = min(fv.velocity,      100.0);
+    fv.priceDeviation   = min(fv.priceDeviation,  1.0);
+    fv.sizeRatio        = min(fv.sizeRatio,      20.0);
+    fv.timeBetween      = min(fv.timeBetween,   300.0);
+    fv.repeatPriceRate  = min(fv.repeatPriceRate, 1.0);
+
 
     return fv;
 }
@@ -114,4 +125,34 @@ double FeatureExtractor::calcRepeatPriceRate(const Order& current, const deque<O
     }
 
     return static_cast<double>(matches) / orders.size();
+}
+
+
+// toJSON for buildiing [v1,v2,v3,v4,v5,v6] - this exact format will go to py for fraud detection
+string FeatureVector::toJSON() const{
+    auto v = toVector();
+    ostringstream oss;
+    oss << "[";
+    for (size_t i = 0; i < v.size(); i++){
+        if (i>0) oss << ",";
+        oss << fixed << setprecision(4) << v[i];    // taking 4 decoimal points for precison
+    }
+
+    oss << "]";
+
+    return oss.str();
+}
+
+// isSus precheck for ml it needs 2+ flags to avoid poitive from single noisy features
+bool FeatureVector::isSuspicious() const{
+    int flags = 0;
+
+    if (velocity > 20.0)        flags++;     // > 20 orders last in 60s
+    if (priceDeviation > 0.05)  flags++;    // > 5% away from market mid 
+    if (sizeRatio > 5.0)        flags++;   // > 5x thierr avg order size
+    if (repeatPriceRate > 0.7)  flags++;  // same price > 70% of history
+
+
+    return flags >= 2;
+    
 }
