@@ -71,7 +71,7 @@ private:
     double calcRepeatPriceRate(const Order& current, const deque<Order>& orders) const;
 
     static long long toPaise(double price){
-        return static_cast<long long>(price * 100 + 0.5)
+        return static_cast<long long>(price * 100 + 0.5);
     }
 
 };
