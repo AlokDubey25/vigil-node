@@ -5,6 +5,7 @@
 # include <string>
 # include <iostream>
 # include <iomanip>
+# include <sstream>
 # include "order.h"
 using namespace std;
 
@@ -36,6 +37,11 @@ struct FeatureVector{
             << "\n";
     }
 
+    // for JSON
+    string toJSON() const;
+
+    // basic rule check woks before ML exists and like it return teur if 2+ features look sus
+    bool isSuspicious() const;
 };
 
 
@@ -63,5 +69,9 @@ private:
     double calcSizeRatio(const Order& current, const deque<Order>& orders) const;
     double calcTimeBetween(const deque<Order>& orders) const;
     double calcRepeatPriceRate(const Order& current, const deque<Order>& orders) const;
+
+    static long long toPaise(double price){
+        return static_cast<long long>(price * 100 + 0.5)
+    }
 
 };
