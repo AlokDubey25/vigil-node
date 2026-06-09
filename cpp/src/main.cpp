@@ -61,8 +61,14 @@ int main(){
         // 03. extract 6 featuews and print them
         FeatureVector fv = extractor.extract(o, midPrice);
         fv.print(o.userID);
+        cout<< "            json:   " << fv.toJSON() << "\n";
 
-        // 04. add to order book
+        // 04. rule based check - catches obvious threats before ML exists
+        if (fv.isSuspicious()){
+            cout<< "            [!] sus - flagged (ML scores)\n";
+        }
+        
+        // 05. add to order book
         book.addOrder(o);
     };
 
@@ -107,30 +113,6 @@ int main(){
     cout<< "\n[ENGINE] session done for now... trades execuded successfully as: "
         << tradeCount << "\n";
 
-
-    auto insertOrder = [&](const Order& o){
-        // 01. save to DB
-        if (!db.saveOrder(o))
-            cerr<< "[WARN] order " << o.orderID << " not saved to DB\n";
-
-        // 02. mid-price from book
-        double midPrice = 0.0;
-        if (book.hasBuys() && book.hasSells())
-            midPrice = (book.getBestBidPrice() + book.getBestAskPrice()) / 2.0;
-
-        // 03. extract features + show output
-        FeatureVector fv = extractor.extract(o, midPrice);
-        fv.print(o.userID);
-        cout<< "            json:   " << fv.toJSON() << "\n";
-
-        // 04. rule-based check - catches obvious threats before ML exists
-        if (fv.isSuspicious()){
-            cout<< "            [!] sus - flagged (ML scoring)\n";
-        }
-
-        // 05. add to order book
-        book.addOrder(o);
-    };
 
     return 0;  // destructor file here when db is closed
 
