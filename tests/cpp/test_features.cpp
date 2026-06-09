@@ -2,6 +2,7 @@
 # include "catch.hpp"
 # include "../../cpp/include/feature_extractor.h"
 # include "../../cpp/include/order.h"
+# include <algorithm>
 using namespace std;
 
 static const long long BASE = 1700000000LL;     // testing for nonw like will this be working or not
@@ -198,4 +199,113 @@ TEST_CASE("rolling window never exceeds WINDOW_SIZE"){
     FeatureVector fv = ex.extract(mk(106, "I1", 100.0, 10, "BUY", BASE+105), 0.0);
 
     REQUIRE(fv.velocity == Approx(60.0));
+}
+
+
+// TEST - 09 : toJSON format
+TEST_CASE("toJSON produces valid format for Python"){
+    FeatureVector fv;
+    fv.velocity         = 5.0;
+    fv.priceDeviation   = 0.1234;
+    fv.cancelRate       = 0.0;
+    fv.sizeRatio        = 2.5;
+    fv.timeBetween      = 30.0;
+    fv.repeatPriceRate  = 0.25;
+
+    string json = fv.toJSON();
+
+    SECTION("starts with [ and ends with ]"){
+        REQUIRE(json.front() == '[');
+        REQUIRE(json.back() == ']');
+    }
+
+    SECTION("has exactly 5 commas for 6 values"){
+        int commas = static_cast<int>(count(json.begin(), json.end(), ','));
+        REQUIRE(commas == 5);
+    }
+
+    SECTION("all-zeroes vector produces correct format"){
+        FeatureVector zfv;
+        // by default : all values are zero
+        string zjson = zfv.toJSON();
+
+        REQUIRE(zjson.front() == '[');
+        REQUIRE(zjson.back() == ']');
+
+        int commas = static_cast<int>(count(zjson.begin(), zjson.end(), ','));
+        REQUIRE(commas == 5);
+    }
+}
+
+// TEST - 10 : isSuspicious logic
+TEST_CASE("isSuspicious requires 2 or more flags"){
+
+    SECTION("safe defaults are not suspicious"){
+        FeatureVector fv;                          // all defaults - new user
+        REQUIRE(fv.isSuspicious() == false);
+    }
+
+    SECTION("one flag alone is not enough"){
+        FeatureVector fv;
+        fv.velocity = 25.0;                       // only velocity is high
+        REQUIRE(fv.isSuspicious() == false);
+    }
+
+    SECTION("high velocity AND large size = sus"){
+        FeatureVector fv;
+        fv.velocity = 25.0;                         // flag 1: > 20
+        fv.sizeRatio= 8.0;                         // flag 2: > 5
+        REQUIRE(fv.isSuspicious() == true);
+    }
+
+    SECTION("high price deviation AND repeat price = sus"){
+        FeatureVector fv;
+        fv.priceDeviation   = 0.10;              // flag 1: > 0.05
+        fv.repeatPriceRate  = 0.80;             // flag 2: > 0.7
+        REQUIRE(fv.isSuspicious() == true);
+    }
+
+    SECTION("exactly at threshold is not flagged"){
+        FeatureVector fv;
+        fv.velocity = 20.0;                   // exactly 20, NOT > 20
+        fv.sizeRatio= 5.0;                   // exactly 5, NOT > 5
+        REQUIRE(fv.isSuspicious() == false);
+    }
+
+    SECTION("all 4 flags = definitely sus"){
+        FeatureVector fv;
+        fv.velocity         = 50.0;
+        fv.priceDeviation   = 0.20;
+        fv.sizeRatio        = 10.0;
+        fv.repeatPriceRate  = 0.90;
+        REQUIRE(fv.isSuspicious() == true);
+    }
+}
+
+
+// TEST - 11 : feature caps
+TEST_CASE("feature caps prevent extreme values"){
+    static const long long BASE = 1700000000LL;
+    FeatureExtractor ex;
+
+    SECTION("velocity capped at 100 even with full window"){
+        // 101 orders all at BASE - window holds last 100
+        for (int i = 0; i < 101; i++)
+            ex.extract(mk(i+1, "I1", 100.0, 10, "BUY", BASE), 0.0);
+
+        // current at BASE + 30, all 100 windows entries within 60s
+        // also here raw vel would be at 100 - cap also 100 so result = 100
+        FeatureVector fv = ex.extract(mk(102, "I1", 100.0, 10, "BUY", BASE+30), 0.0);
+        REQUIRE(fv.velocity <= 100.0);
+    }
+
+    SECTION("sizeRatio capped at 20"){
+        // history: qty 1 each - average = 1
+        for (int i = 0; i < 5; i++)
+            ex.extract(mk(i+1, "I2", 100.0, 1, "BUY", BASE+i), 0.0);
+
+        // qty=100, avg=1, raw ratio=100 - capped to 20
+        FeatureVector fv = ex.extract(mk(6, "I2", 100.0, 100, "BUY", BASE+5), 0.0);
+        REQUIRE(fv.sizeRatio == Approx(20.0));
+    }
 }
