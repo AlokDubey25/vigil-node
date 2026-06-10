@@ -1,14 +1,25 @@
+# Core Data Handling
+pandas==3.0.3
+numpy==2.4.6
+python-dateutil==2.9.0.post0
+six==1.17.0
+
+# Machine Learning & Optimization
+scikit-learn==1.8.0
+xgboost==3.2.0
+scipy==1.17.1
 joblib==1.5.3
+threadpoolctl==3.6.0
+nvidia-nccl-cu12==2.30.4
+
+# Dashboard & Text Formatting 
+rich==15.0.0
 markdown-it-py==4.2.0
 mdurl==0.1.2
-numpy==2.4.6
-nvidia-nccl-cu12==2.30.4
-pandas==3.0.3
 Pygments==2.20.0
-python-dateutil==2.9.0.post0
-rich==15.0.0
-scikit-learn==1.8.0
-scipy==1.17.1
-six==1.17.0
-threadpoolctl==3.6.0
-xgboost==3.2.0
+
+# Testing 
+pytest==8.3.4
+
+# Plots - for model evalutaion
+matplotlib==3.10.0
