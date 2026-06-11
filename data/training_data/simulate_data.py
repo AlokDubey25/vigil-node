@@ -57,13 +57,14 @@ def wash_order() -> dict:
     }
 
 # generate all records
-fraud_generators = [bot_order() for _ in range(N_NORMAL)]
+fraud_generators = [bot_order, spoof_order, wash_order]
 
 records = [noraml_order() for _ in range(N_NORMAL)]
 
 # cycle through fraud patterns evenly
 for i in range(N_FRAUD):
-    records.append(fraud_generators[i % 3]())
+    generate_func = fraud_generators[i % 3]
+    records.append(generate_func())
 
 # shuffle so fraud isn't all at end 
 np.random.shuffle(records)
