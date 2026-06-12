@@ -1,11 +1,13 @@
 import os, sys, pytest 
 import pandas as pd
 
-ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "../.."))
+ROOT     = os.path.abspath(os.path.join(os.path.dirname(__file__), "../.."))
 sys.path.insert(0, ROOT)
+RF_PATH  = os.path.join(ROOT, "models/saved/fraud_model_rf.pkl")
+MODEL_PATH = os.path.join(ROOT, "models/saved/fraud_model_xgb.pkl"),
 
-MODEL_PATH = os.path.join(ROOT, "models/saved/fraud_model_xgb.pkl")
-FEATURES   = ["velocity", "priceDeviation", "cancelRate", "sizeRatio", "timeBetween", "repeatPriceRate"]
+FEATURES = ["velocity", "priceDeviation", "cancelRate", "sizeRatio", "timeBetween", "repeatPriceRate"]
+
 
 #   helpers
 def load_model():
@@ -53,3 +55,36 @@ def test_normal_order_low_score():
     model = load_model()
     p = score(model, [1.0, 0.005, 0.0, 1.0, 60.0, 0.05])
     assert p < 0.5, f"Normal order should score below 0.5, got {p:.4f}"
+
+# now this for rf model
+
+def test_rf_model_file_exists():
+    assert os.path.exists(RF_PATH), (
+        f"RF model not found: (RF_PATH)\n"
+        "   Fix: python python/models/train_rf.py" 
+    )
+
+def test_rf_model_loads():
+    import joblib
+    rf = joblib.load(RF_PATH)
+    assert rf is not None
+
+def test_rf_fraud_scores_higher_than_normal():
+    import joblib
+    rf      = joblib.load(RF_PATH)
+    normal  = pd.DataFrame([[1.0, 0.005, 0.0, 1.0, 60.0, 0.05]], columns=FEATURES)
+    fraud   = pd.DataFrame([[80.0, 0.20, 0.0, 15.0, 0.5, 0.90]], columns=FEATURES)
+    n_score = float(rf.predict_proba(normal)[0][1])
+    f_score = float(rf.predict_proba(fraud)[0][1])
+    assert f_score > n_score, f"RF fraud ({f_score:.4f}) must > normal ({n_score:.4f})"
+
+def test_ensemble_output_in_range():
+    from python.models.ensemble import ensemble_score
+    p = ensemble_score([2.0, 0.01, 0.0, 1.0, 45.0, 0.1])
+    assert 0.0 <= p <= 1.0
+
+def test_ensemble_fraud_higher_than_normal():
+    from python.models.ensemble import ensemble_score
+    n = ensemble_score([1.0, 0.005, 0.0, 1.0, 60.0, 0.05])
+    f = ensemble_score([80.0, 0.20, 0.0, 15.0, 0.5, 0.90])
+    assert f > n, f"Ensemble fraud ({f:.4f}) must > normal ({n:.4f})"
