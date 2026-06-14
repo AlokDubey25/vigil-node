@@ -35,7 +35,7 @@ def train() -> float:
     # 03 - CLASS IMBALANCE Wt
     # scale_pos_wt = normal_count/fraud_count
     # tells XGBoost: missing one fraud case costs this many times more
-    pos_weight = int((y_train == 0).sum() / (y_train == 1).sum())
+    pos_weight = int(round((y_train == 0).sum() / (y_train == 1).sum()))
     print(f"scale_pos_weight = {pos_weight}")
 
     # 04 - TRAIN

@@ -41,9 +41,9 @@ def validate_features(features: list) -> Tuple[bool, str]:
     for i, val in enumerate(features):
         name = FEATURE_NAMES[i]
 
-        # must be a number
-        if not isinstance(val, (int, float)):
-            return False, f"{name} is not a number: {val}"
+        # must be a number 
+        if isinstance(val, bool) or not isinstance(val, (int, float)):
+            return False, f"{name} must be a number, got {type(val).__name__}"
         
         # must not be NaN or infinite
         if math.isnan(val) or math.isinf(val):
