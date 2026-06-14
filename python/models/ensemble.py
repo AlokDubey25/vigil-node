@@ -14,6 +14,18 @@ _rf  = None
 
 def load_models():
     global _xgb, _rf
+    if not os.path.exists(XGB_PATH):
+        raise FileNotFoundError(
+            f"XGBoost model not found: {XGB_PATH}\n"
+            "   Run: python3 python/models/train_xgb.py"
+        )
+    
+    if not os.path.exists(RF_PATH):
+        raise FileNotFoundError(
+            f"RF model not found: {RF_PATH}\n"
+            "   Run: python3 python/models/train_rf.py"
+        )
+
     if _xgb is None:
         _xgb = joblib.load(XGB_PATH)
     if _rf is None:
