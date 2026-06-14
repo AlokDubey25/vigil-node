@@ -11,12 +11,15 @@ from python.utils.logger import get_logger
 log = get_logger("scorer")
 
 def write(payload: dict):
-    # One JSON line to stdout and flush immediately.
-    # flush=True - without it cpp blocks forever
-    print(json.dumps(payload), flush=True)
+    try:
+        print(json.dumps(payload), flush=True)
+    except BrokenPipeError:
+        pass
 
 def main():
     # Startip : load models
+    sys.stdout.reconfigure(line_buffering = True)
+
     log.info("Loadinf mmodels......")
     try:
         load_models()
@@ -30,37 +33,41 @@ def main():
     log.info("Scorer ready - waiting for feature vectors")
 
     # main loop: one feature vector in, one score out
-    for line in sys.stdin:
-        line = line.strip()
-        if not line:
-            continue
+    try:
+        for line in sys.stdin:
+            line = line.strip()
+            if not line:
+                continue
 
-        # parse JSON from Cpp
-        try:
-            features = json.loads(line)
-        except json.JSONDecodeError as e:
-            log.error(f"JSON parse error on: {line!r}")
-            write({"error": "invalid JSON"})
-            continue
+            # parse JSON from Cpp
+            try:
+                features = json.loads(line)
+            except json.JSONDecodeError as e:
+                log.error(f"JSON parse error on: {line!r}")
+                write({"error": "invalid JSON"})
+                continue
 
-        # validate befroe scoreing - catches Cpp bugs early
-        ok, reason = validate_features(features)
-        if not ok:
-            log.warning(f"Validation failed: {reason}")
-            write({"error": reason})
-            continue
+            # validate befroe scoreing - catches Cpp bugs early
+            ok, reason = validate_features(features)
+            if not ok:
+                log.warning(f"Validation failed: {reason}")
+                write({"error": reason})
+                continue
 
-        # score and reply
-        try:
-            score = ensemble_score(features)
-            log.debug(f"score={score:.4f} features={features}")
-            write({"score": score})
-        except Exception as e:
-            log.error(f"Scoring error: {e}")
-            write({"error": str(e)})
+            # score and reply
+            try:
+                score = ensemble_score(features)
+                log.debug(f"score={score:.4f} features={features}")
+                write({"score": score})
+            except Exception as e:
+                log.error(f"Scoring error: {e}")
+                write({"error": str(e)})
+                
+    except (BrokenPipeError, EOFError):
+        log.info("Pipe closed by Cpp - existing")
+    except KeyboardInterrupt:
+        log.info("Interrupted - existing")
+
 
 if __name__ == "__main__":
     main()
-'''
-there is an error in douwnloading something like files , lib and ubuntu issue
-'''
