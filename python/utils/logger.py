@@ -5,7 +5,7 @@ _ROOT = Path(__file__).resolve().parent.parent.parent
 _LOGS = _ROOT / "logs"
 
 def get_logger(name: str) -> logging.Logger:
-    _LOGS.mkdir("lobgs", exist_ok=True)
+    _LOGS.mkdir(parents=True, exist_ok=True)
     logger = logging.getLogger(name)
 
     if logger.handlers:

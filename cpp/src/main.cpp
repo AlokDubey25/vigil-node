@@ -70,7 +70,7 @@ int main(){
         book.addOrder(o);
     };
 
-    cout<< "\n   Inserting orders + extracting features   \n";
+    cout<< "\n   Inserting orders   \n";
     
     // _________HERE WE INSERTED ORDERS FOR NOW BEING____________
     // NEW DATA FOR ENTRIES FOR CHECKING ENGINE WITH ALL TEST PASS
@@ -111,13 +111,3 @@ int main(){
 
 }
 
-
-/*
-[DB] Opneed: vigil.db
-[DB] Tables ready. 
-[DB] loaded 0 permanently blocked users
-[ENIGINE]0 users on permanent blacklist
-python3: can't open file '/mnt/c/Users/JUST_ALOK/vigil-node/build/python/bridge/scorer.py': [Errno 2] No such file or directory
-[BRIDGE] pyhton did not send ready signal
-[WARN] Bridge not ready - using fallback score
-*/

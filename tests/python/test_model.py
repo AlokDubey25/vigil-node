@@ -4,7 +4,7 @@ import pandas as pd
 ROOT     = os.path.abspath(os.path.join(os.path.dirname(__file__), "../.."))
 sys.path.insert(0, ROOT)
 RF_PATH  = os.path.join(ROOT, "models/saved/fraud_model_rf.pkl")
-MODEL_PATH = os.path.join(ROOT, "models/saved/fraud_model_xgb.pkl"),
+MODEL_PATH = os.path.join(ROOT, "models/saved/fraud_model_xgb.pkl")
 
 FEATURES = ["velocity", "priceDeviation", "cancelRate", "sizeRatio", "timeBetween", "repeatPriceRate"]
 

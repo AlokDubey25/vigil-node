@@ -31,7 +31,7 @@ def validate_features(features: list) -> Tuple[bool, str]:
 
     # 1 - must be list
     if not isinstance(features, list):
-        return False, f"expected list, got {type(features)._name_}"
+        return False, f"expected list, got {type(features).__name__}"
     
     # 2 - must have 6 values
     if len(features) != 6:
