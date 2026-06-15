@@ -52,6 +52,64 @@ Bridge::Bridge(const string& command){
     reader_ = fdopen(out_pipe[0], "r"), // we read here <- python stdout
 
     if (!reader_){
-        
+        cerr<<  "[BRIFGE] fdopen failed\n",
+        close(wfd_);
+        return;
+    }
+
+    ready_ = waitForReady();
+    if (ready_)
+        cout<< "[BRIDGE] python scorer is ready\n";
+    else:
+        cerr<< "[BRIDGE] pyhton did not send ready signal\n";
+}
+
+Bridge::~Bridge(){
+    if (wfd_ >= 0) close(wfd_);
+    if (reader_)   fclose(reader_);
+    if (pid_ > 0){
+        kill(pid_, SIGTERM);
+        waitpid(pid_, nullptr, 0);
+    }
+}
+
+// wait for {ready : true} from py
+bool Bridge::waitForReady(){
+    char buf[256];
+    if (!fgets(buf, sizeof(buf), reader_)) return false;
+    string line(buf);
+    return line.find("ready") != string::npos;
+}
+
+bool Bridge::writeLine(const string& line){
+    if (wfd_ < 0) return false;
+    string data = line + "\n";
+    ssize_t n = write(wfd_, data.c_str(), data.size());
+    return n == static_cast<ssize_t>(data.size());
+}
+
+string Bridge::readLine(){
+    if (!reader_) return "";
+    char buf[1024];
+    if (!fgets(buf, sizeof(buf), reader_)) return "";
+    string s(buf);
+    if (!s.empty() && s.back() == "\n") s.pop_back();
+    return s;
+}
+
+double Bridge::score(const string& featureJSON){
+    if (!ready_) return FALLBACK_SCORE;
+
+    if (!writeLine(featureJSON)){
+        cerr<< "[BRIDGE] write failed - fallback\n";
+        ready_ = false;
+        return FALLBACK_SCORE;
+    }
+
+    string resp = readLine();
+    if (resp.empty()){
+        cerr<< "[BRIDGE] empty response - fallback\n";
+        ready_ = false;
+        return FALLBACK_SCORE;
     }
 }
