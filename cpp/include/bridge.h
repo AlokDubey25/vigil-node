@@ -5,7 +5,7 @@
 # include <sys/types.h>
 using namespace std;
 
-class  Bridge{
+class Bridge{
 public:
     // command = "python3 python/bridge/scorer.py"
     // run ./vigil from root so relative path works
@@ -31,6 +31,6 @@ private:
 
     bool   waitForReady();
     bool   writeLine(const string& line);
-    string readline();
+    string readLine();
     
 };

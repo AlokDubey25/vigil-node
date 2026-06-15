@@ -5,26 +5,24 @@
 # include "../include/trade.h"
 # include "../include/database.h"
 # include "../include/feature_extractor.h"
+# include "../include/bridge.h"
 using namespace std;
 
 int main(){
-    // so data enter first and after rescan it continue to engine 
+    // 01 :- so data enter first and after rescan it continue to engine 
     DatabaseHandler db("vigil.db");
-    if (!db.isOpen()){
-        cerr<< "[FATAL] Database conncetion failded... Shutting down.\n";
-        return 1;
-    }
+    if (!db.isOpen()) {return 1; }
     
     // load previously blocked users 
     auto blacklist = db.loadBlacklist();
-    if (!blacklist.empty()){
-        cout<< "[ENIGINE]" << blacklist.size()
-            << " users on permanent blacklist\n";
-        for (const auto& uid : blacklist){
-            cout<< "  blocked:  " << uid << "\n";
-        }
-    }else{
-        cout<< "[ENGINE] no blocked users on record as per last data\n";
+    cout<< "[ENIGINE]" << blacklist.size() << " users on permanent blacklist\n";
+        
+
+    // 02 :- Python bridge which is added now - it launched once, stays runnig
+    // run ./vigil from project root so the path resolves correctly
+    Bridge bridge("python3 python/bridge/scorer.py");
+    if (!bridge.isReady()){
+        cerr<< "[WARN] Bridge not ready - using fallback score\n";
     }
 
     
@@ -45,30 +43,30 @@ int main(){
         return o;
     };
 
-    //  inset orders
+    // 03 :- inset orders
     // now every insert will save to main db , extract features, adds to book
     auto insertOrder = [&](const Order& o){
-        // 01. Save to DB first
+        // a. Save to DB first
         if (!db.saveOrder(o))
             cerr<< "[WARN] order " << o.orderID << " not saved to DB\n";
 
-        // 02. compute mid price from current book state
+        // b. compute mid price from current book state
         double midPrice = 0.0;
         if (book.hasBuys() && book.hasSells()){
             midPrice = (book.getBestBidPrice() + book.getBestAskPrice()) / 2.0;
         }
 
-        // 03. extract 6 featuews and print them
+        // c. extract 6 featuews and print them
         FeatureVector fv = extractor.extract(o, midPrice);
         fv.print(o.userID);
         cout<< "            json:   " << fv.toJSON() << "\n";
 
-        // 04. rule based check - catches obvious threats before ML exists
+        // d. rule based check - catches obvious threats before ML exists
         if (fv.isSuspicious()){
             cout<< "            [!] sus - flagged (ML scores)\n";
         }
         
-        // 05. add to order book
+        // e. add to order book
         book.addOrder(o);
     };
 
@@ -82,14 +80,9 @@ int main(){
     insertOrder(makeOrder(4, "I1004", 103.00, 8, "SELL"));
     insertOrder(makeOrder(5, "I1005", 103.25, 5, "SELL"));
     insertOrder(makeOrder(6, "I1006", 106.0, 10, "SELL"));
-    // U1001 places a second order — this one will have real features
-    insertOrder(makeOrder(7, "U1001", 104.50, 8,  "BUY"));
 
-    // Printing it... before matching
-    cout<< "\n   BOOK STATE   \n";
-    book.printBook();
 
-    // continuous loop to match the trade...
+    // 04 :- continuous loop to match the trade...
 
     int tradeCount = 0;
     cout << "MATCHING ENGINE RUNNING\n";

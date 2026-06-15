@@ -4,12 +4,13 @@
 # include <cerrno>
 # include <csignal>
 # include <sys/wait.h>
+using namespace std;
 
 Bridge::Bridge(const string& command){
     // two pipes: in = Cpp -> Python , out = Python -> Cpp
     int in_pipe[2], out_pipe[2];
 
-    if (pipe(in_pipe) != 0 || pipe(out_pipe) = 0){
+    if (pipe(in_pipe) != 0 || pipe(out_pipe) != 0){
         cerr<< "[BRIDGE] pipe() failed: "
             << strerror(errno) << "\n";
 
@@ -27,7 +28,7 @@ Bridge::Bridge(const string& command){
         close(in_pipe[0]); close(out_pipe[1]);
         
         // launch py via shell so PATH is resolved
-        execl("/bin/sh", "sh". "-c", command.c_str(), nullptr);
+        execl("/bin/sh", "sh", "-c", command.c_str(), nullptr);
 
         // only reached if excel fails
         cerr<< "[BRIDGE] exec failed: "
@@ -48,11 +49,11 @@ Bridge::Bridge(const string& command){
     close(in_pipe[0]);  // child reads this end
     close(out_pipe[1]);// choild writes this end
 
-    wfd_    = in_pipe[1],                // we write here -> python stdin
-    reader_ = fdopen(out_pipe[0], "r"), // we read here <- python stdout
+    wfd_    = in_pipe[1];                // we write here -> python stdin
+    reader_ = fdopen(out_pipe[0], "r"); // we read here <- python stdout
 
     if (!reader_){
-        cerr<<  "[BRIFGE] fdopen failed\n",
+        cerr<<  "[BRIDGE] fdopen failed\n";
         close(wfd_);
         return;
     }
@@ -60,7 +61,7 @@ Bridge::Bridge(const string& command){
     ready_ = waitForReady();
     if (ready_)
         cout<< "[BRIDGE] python scorer is ready\n";
-    else:
+    else
         cerr<< "[BRIDGE] pyhton did not send ready signal\n";
 }
 
@@ -93,7 +94,9 @@ string Bridge::readLine(){
     char buf[1024];
     if (!fgets(buf, sizeof(buf), reader_)) return "";
     string s(buf);
-    if (!s.empty() && s.back() == "\n") s.pop_back();
+
+    if (!s.empty() && s.back() == '\n') s.pop_back();
+    if (!s.empty() && s.back() == '\r') s.pop_back();
     return s;
 }
 
