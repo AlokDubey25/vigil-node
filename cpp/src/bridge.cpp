@@ -112,4 +112,21 @@ double Bridge::score(const string& featureJSON){
         ready_ = false;
         return FALLBACK_SCORE;
     }
+
+    // parse {score : 0.xxxx} - find number after score:
+    auto pos = resp.find("\"score\"");
+    if (pos == string::npos){
+        cerr<<"[BRIDGE] no score in: " << resp << "\n";
+        return FALLBACK_SCORE;
+    }
+    auto colon = resp.find(':', pos);
+    if (colon == string::npos) return FALLBACK_SCORE;
+
+    try {
+        double s = stod(resp.substr(colon +1));
+        return max(0.0, min(1.0, s));   // clamp to [0,1]
+    } catch (...) {
+        cerr<< "[BRIDGE] parse failed: "<< resp << "\n";
+        return FALLBACK_SCORE;
+    }
 }
