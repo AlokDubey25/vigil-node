@@ -29,7 +29,7 @@ def load_models():
     if _xgb is None:
         _xgb = joblib.load(XGB_PATH)
     if _rf is None:
-        RF_PATH = joblib.load(RF_PATH)
+        _rf = joblib.load(RF_PATH)
 
 def ensemble_score(features: list) -> float:
     """

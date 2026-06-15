@@ -104,20 +104,35 @@ bool DatabaseHandler::saveTrade(Trade& t){
 
     rc = sqlite3_step(stmt);
 
+
+
+/* 
     bool ok = (rc == SQLITE_DONE);
-    if (!ok){
+    if (!ok){                   // This here fails whenever it failed (ok == false)
         // grab the tradeID the DB just assigned
         t.tradeID = static_cast<int>(sqlite3_last_insert_rowid(db_));
         sqlite3_finalize(stmt);
-        return true;
-    }else{
+        return true;        // SO this returns true on failure of ok
+    }else{                 // And this blocks runs if it was SUCESSFULL (ok == true)
         cerr<< "[DB] saveTrade step failded: "<< sqlite3_errmsg(db_)<< "\n";
+        sqlite3_finalize(stmt);
+        return false;   // Returning False on sucess
+    }
+*/
+
+    // Changing conditional laytout
+    if (rc == SQLITE_DONE){
+        // success pathway: Extract new autoincremented key identity
+        t.tradeID = static_cast<int>(sqlite3_last_insert_rowid(db_));
+        sqlite3_finalize(stmt);
+        return true;
+    } else {
+        // Failure Pathway
+        cerr << "[DB] saveTrade step failed: " << sqlite3_errmsg(db_) << "\n";
         sqlite3_finalize(stmt);
         return false;
     }
-
-    sqlite3_finalize(stmt);
-    return ok;
+    
 }
 
 

@@ -4,6 +4,8 @@ import joblib
 from xgboost import XGBClassifier
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import classification_report, f1_score
+# wrong operator problem was there earlier which is resolved now...
+
 
 ROOT        = os.path.abspath(os.path.join(os.path.dirname(__file__), "../.."))
 DATA_PATH   = os.path.join(ROOT, "data/training_data/processed/features_train.csv")
