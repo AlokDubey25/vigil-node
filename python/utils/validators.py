@@ -51,6 +51,7 @@ def validate_features(features: list) -> Tuple[bool, str]:
         
         # must be within valid range
         low, high = FEATURE_RANGES[name]
+        
         if val < low or val > high:
             return False, f"{name}={val:.4f} outside range [{low}, {high}]"
         

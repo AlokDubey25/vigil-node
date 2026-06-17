@@ -38,6 +38,8 @@ def ensemble_score(features: list) -> float:
     Average of XGBoost and Random Forest.
     """
     load_models()
+
+
     df = pd.DataFrame([features], columns=FEATURES)
     xgb_prob = float(_xgb.predict_proba(df)[0][1])
     rf_prob  = float(_rf.predict_proba(df)[0][1])
