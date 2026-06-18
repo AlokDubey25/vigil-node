@@ -23,6 +23,7 @@ add_executable(vigil
     cpp/src/database.cpp
     cpp/src/feature_extractor.cpp
     cpp/src/bridge.cpp 
+    cpp/src/config.cpp 
     cpp/vendor/sqlite3.c 
 )
 target_link_libraries(vigil Threads::Threads)

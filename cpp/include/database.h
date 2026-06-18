@@ -29,6 +29,8 @@ public:
 
     vector<string> loadBlacklist();                 // reads from db
 
+    int getUserFlagCount(const string& userID);     // it is to decide WARN -> TEMP -> PERM
+
 private:
         sqlite3* db_ = nullptr;
 
