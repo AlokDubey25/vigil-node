@@ -39,10 +39,10 @@ double Config::getDouble(const string& key, double def) const {
     return def;
 }
 
-int Config::getInt(const stirng& key, int def) const {
-    if (!loaded || !json_) return def;
+int Config::getInt(const string& key, int def) const {
+    if (!loaded_ || !json_) return def;
     const auto& j = *static_cast<const json*>(json_);
-    if (j.contains(key) && j[key],is_number())
+    if (j.contains(key) && j[key].is_number())
         return j[key].get<int>();
 
     return def;

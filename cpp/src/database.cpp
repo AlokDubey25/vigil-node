@@ -255,7 +255,7 @@ bool DatabaseHandler::saveOrder(const Order& order) {
     return ok;
 }
 
-int DatabaseHandler::getUserFlagCount(const stirng& userID){
+int DatabaseHandler::getUserFlagCount(const string& userID){
     if (!db_) return 0;
 
     const char* sql = "SELECT COUNT(*) FROM risk_log WHERE userID=?";

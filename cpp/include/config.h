@@ -2,7 +2,7 @@
 # include <string>
 using namespace std;
 
-clss Config{
+class Config{
 public:
     // opens n parses setting.json
     // if file missing, falls back to defaults silently
@@ -14,7 +14,7 @@ public:
     // read with fallback - never throws
     double getDouble(const string& key, double def = 0.0)  const;
     int    getInt   (const string& key, int    def = 0  )  const;
-    string getString(const string& key, const  def = "" )  const;
+    string getString(const string& key, const  string& def = "" )  const;
 
 
 private:
