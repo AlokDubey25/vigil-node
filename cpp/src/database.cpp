@@ -254,3 +254,23 @@ bool DatabaseHandler::saveOrder(const Order& order) {
     sqlite3_finalize(stmt);
     return ok;
 }
+
+int DatabaseHandler::getUserFlagCount(const stirng& userID){
+    if (!db_) return 0;
+
+    const char* sql = "SELECT COUNT(*) FROM risk_log WHERE userID=?";
+
+    sqlite3_stmt* stmt = nullptr;
+    int rc = sqlite3_prepare_v2(db_, sql, -1, &stmt, nullptr);
+    if (rc != SQLITE_OK) return 0;
+
+    sqlite3_bind_text(stmt, 1, userID.c_str(), -1, SQLITE_TRANSIENT);
+
+    int count = 0;
+    if (sqlite3_step(stmt) == SQLITE_ROW) {
+        count = sqlite3_column_int(stmt, 0);    // 0 - based column index
+    }
+
+    sqlite3_finalize(stmt);
+    return count;
+}
