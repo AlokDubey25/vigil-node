@@ -18,7 +18,7 @@ int main(){
 
     // 01 :- config: reads settings.json before anything else
     Config cfg("config/settings.json");
-    if (!cfg.isloaded())
+    if (!cfg.isLoaded())
         cerr<< "[WARN] using hardcoded defaults\n";
 
     // read all thresholds from config with safe fallbacks
@@ -89,13 +89,14 @@ int main(){
     // 04 :- it will hepl to detemine escalation action like
     // prevFlags = how many times already flagged (from risk_log)
     // thisFlag  = prevFlags + 1 (current incident)
-    auto escalate = [&](const string& userID) -> sting {
+    auto escalate = [&](const string& userID) -> string {
         int prevFlags = db.getUserFlagCount(userID);
         int thisFlag  = prevFlags + 1;
 
         if (thisFlag < TEMP_AT) return "WARN";
         if (thisFlag < PERM_AT) return "TEMP_BLOCK";
-                                       "PERMANENT_BLOCK";
+        
+        return "PERMANENT_BLOCK";
     };
 
 
