@@ -48,4 +48,4 @@ def train() -> float:
 if __name__ == "__main__":
     train() 
 
-# tried many things but none is workin and bugging is hearder cuz no bug is obsereved
+# resolved issue
