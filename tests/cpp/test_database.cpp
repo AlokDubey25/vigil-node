@@ -138,3 +138,34 @@ TEST_CASE("loadBlacklist reads blocked users correctly"){
     REQUIRE(list.size() == 1);                     // DISTINCT in SQL
     }
 }
+
+// Test - 07 : User flag count 1 & 2
+TEST_CASE("getUserFlagCount returns 0 for fresh user"){
+    DatabaseHandler db(MEM_DB);
+    REQUIRE(db.isOpen());
+    db.saveOrder(mkOrder(1, "I1001", 100.0, 10, "BUY"));
+
+    REQUIRE(db.getUserFlagCount("I1001") == 0);
+    REQUIRE(db.getUserFlagCount("NOONE") == 0);     // unkown user = 0 too
+}
+
+TEST_CASE("getUserFlagCount increments with each risk event"){
+    DatabaseHandler db(MEM_DB);
+    REQUIRE(db.isOpen());
+    db.saveOrder(mkOrder(1, "I1001", 100.0, 10, "BUY"));
+
+    // 1st flag
+    db.saveRiskEvent("I1001", 1, 0.85, "suspicious", "WARN");
+    REQUIRE(db.getUserFlagCount("I1001") == 1);
+
+    // 2nd flag
+    db.saveRiskEvent("I1001", 1, 0.87, "suspicious", "WARN");
+    REQUIRE(db.getUserFlagCount("I1001") == 2);
+
+    // 3rd flag
+    db.saveRiskEvent("I1001", 1, 0.91, "escalated", "TEMP_BLOCK");
+    REQUIRE(db.getUserFlagCount("I1001") == 3);
+
+    // other users are independent
+    REQUIRE(db.getUserFlagCount("I999") == 0);
+}
