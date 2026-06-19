@@ -65,9 +65,16 @@ add_executable(test_features
 )
 target_include_directories(test_features PRIVATE cpp/include tests/cpp)
 
+# Test config
+add_executable(test_config
+    tests/cpp/test_config.cpp 
+    cpp/src/config.cpp 
+)
+target_include_directories(test_config PRIVATE cpp/include tests/cpp)
 
 # 4. CTest integration to model
 enable_testing()
 add_test(NAME orderbook_tests COMMAND test_orderbook)
 add_test(NAME database_tests  COMMAND test_database)
 add_test(NAME feature_tests   COMMAND test_features) 
+add_test(NAME config_tests    COMMAND test_config)

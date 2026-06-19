@@ -51,7 +51,7 @@ TEST_CASE("velocity counts orders within 60-second window"){
         FeatureExtractor ex;
         // 3 orders all at BASE
         for (int i = 0; i < 3; i++)
-            ex.extract(mk(i+1, "I1", 100.0,10,"BUY", BASE+70), 0.0);
+            ex.extract(mk(i+1, "I1", 100.0,10,"BUY", BASE), 0.0);
 
         FeatureVector fv = ex.extract(mk(4,"I1",100.0,10,"BUY", BASE+70), 0.0);
 

@@ -24,13 +24,13 @@ static Order mkOrder(int id, string user, double price,
 
 static Trade mkTrade(int buyID, int sellID, double price, int qty){
     Trade t;
-    t.buyOrderID = buyID;
+    t.buyOrderID  = buyID;
     t.sellOrderID = sellID;
-    t.price = price;
-    t.quantity = qty;
-    t.timestamp = static_cast<long long>(time(nullptr));
-    t.buyFilled = true;
-    t.sellFilled = true;
+    t.price       = price;
+    t.quantity    = qty;
+    t.timestamp   = static_cast<long long>(time(nullptr));
+    t.buyFilled   = true;
+    t.sellFilled  = true;
     return t;
 }
 
@@ -53,8 +53,8 @@ TEST_CASE("saveOrder writes a row successfully"){
         REQUIRE(db.saveOrder(mkOrder(2, "I1002", 101.0, 5, "SELL")) == true);
     }
     SECTION("duplicate orderID fails (PRIMARY KEY constraint)"){
-        db.saveOrder(mkOrder(1, "I1001", 100.0, 10, "BUY"));
-        REQUIRE(db.saveOrder(mkOrder(1, "I999", 200.0, 5, "SELL")) == false);
+        db.saveOrder(mkOrder(3, "I1001", 100.0, 10, "BUY"));
+        REQUIRE(db.saveOrder(mkOrder(3, "I999", 200.0, 5, "SELL")) == false);
     }
 }
 
@@ -62,13 +62,14 @@ TEST_CASE("saveOrder writes a row successfully"){
 TEST_CASE("updateOrderStatus changes status field"){
     DatabaseHandler db(MEM_DB);
     REQUIRE(db.isOpen());
-    db.saveOrder(mkOrder(1, "I1001", 100.0, 10, "BUY"));
 
     SECTION("update to FILLED succeeds"){
-        REQUIRE(db.updateOrderStatus(1, "FILLED") == true);
+        db.saveOrder(mkOrder(201, "I1001", 100.0, 10, "BUY"));
+        REQUIRE(db.updateOrderStatus(201, "FILLED") == true);
     }
     SECTION("update to REJECTED succeeds"){
-        REQUIRE(db.updateOrderStatus(1, "REJECTED") == true);
+        db.saveOrder(mkOrder(202, "I1001", 100.0, 10, "BUY"));
+        REQUIRE(db.updateOrderStatus(202, "REJECTED") == true);
     }
     SECTION("update non-existent order still returns true"){
         // UPDATE on missing row isn't an error in SQLite 
@@ -82,11 +83,11 @@ TEST_CASE("saveTrade writes correctly"){
     REQUIRE(db.isOpen());
 
     // orders must exist first - FOREIGN KEY constraint
-    db.saveOrder(mkOrder(1, "I1001", 104.0, 10, "BUY"));
-    db.saveOrder(mkOrder(2, "I1002", 103.0, 10, "SELL"));
+    db.saveOrder(mkOrder(401, "I1001", 104.0, 10, "BUY"));
+    db.saveOrder(mkOrder(402, "I1002", 103.0, 10, "SELL"));
 
     SECTION("valid trade with existing orders succeeds"){
-        Trade t = mkTrade(1, 2, 103.0, 10);
+        Trade t = mkTrade(401, 402, 103.0, 10);
         REQUIRE(db.saveTrade(t) == true);
     }
 }
@@ -95,17 +96,19 @@ TEST_CASE("saveTrade writes correctly"){
 TEST_CASE("saveRiskEvent writes to risk_log"){
     DatabaseHandler db(MEM_DB);
     REQUIRE(db.isOpen());
-    db.saveOrder(mkOrder(1, "I1001", 100.0, 10, "BUY"));
+    
 
     SECTION("WARN event accepted"){
+        db.saveOrder(mkOrder(501, "I1001", 100.0, 10, "BUY"));
         REQUIRE(db.saveRiskEvent(
-            "I1001", 1, 0.65, "high velocity", "WARN"
+            "I1001", 501, 0.65, "high velocity", "WARN"
         ) == true);
     }
 
     SECTION("PERMANENT_BLOCK event accpted"){
+        db.saveOrder(mkOrder(502, "I1001", 100.0, 10, "BUY"));
         REQUIRE(db.saveRiskEvent(
-            "I1001", 1, 0.97, "confirmed fraud", "PERMANET_BLOCK"
+            "I1001", 502, 0.97, "confirmed fraud", "PERMANENT_BLOCK"
         ) == true);
     }
 }
@@ -114,56 +117,62 @@ TEST_CASE("saveRiskEvent writes to risk_log"){
 TEST_CASE("loadBlacklist reads blocked users correctly"){
     DatabaseHandler db(MEM_DB);
     REQUIRE(db.isOpen());
-    db.saveOrder(mkOrder(1, "I999", 100.0, 10, "BUY"));
 
     SECTION("empty bkacklist when no blocks exists"){
         auto list = db.loadBlacklist();
         REQUIRE(list.empty() == true);
     }
     SECTION("blocked user appears in list"){
-        db.saveRiskEvent("I999", 1, 0.99, "confirmed fraud", "PERMANENT_BLOCK");
+        db.saveOrder(mkOrder(601, "I999", 100.0, 10, "BUY"));
+        db.saveRiskEvent("I999", 601, 0.99, "confirmed fraud", "PERMANENT_BLOCK");
         auto list = db.loadBlacklist();
         REQUIRE(list.size() == 1);
         REQUIRE(list[0] == "I999");
     }
     SECTION("WARN events don't show in blacklist"){
-        db.saveRiskEvent("I999", 1, 0.65, "sus", "WARN"); // warn not permanent block
+        db.saveOrder(mkOrder(602, "I999", 100.0, 10, "BUY"));
+        db.saveRiskEvent("I999", 602, 0.65, "sus", "WARN"); // warn not permanent block
         auto list = db.loadBlacklist();
         REQUIRE(list.empty() == true);                   // still empty
     }
     SECTION("DISTINCT - same user blocked multiple times appears once"){
-        db.saveRiskEvent("I999", 1, 0.99, "strike 1", "PERMANENT_BLOCK");
-        db.saveRiskEvent("I999", 1, 0.99, "strike 2", "PERMANENT_BLOCK");
+        db.saveOrder(mkOrder(603, "I999", 100.0, 10, "BUY"));
+        db.saveOrder(mkOrder(604, "I999", 100.0, 10, "BUY"));
+        db.saveRiskEvent("I999", 603, 0.99, "strike 1", "PERMANENT_BLOCK");
+        db.saveRiskEvent("I999", 604, 0.99, "strike 2", "PERMANENT_BLOCK");
         auto list = db.loadBlacklist();
-    REQUIRE(list.size() == 1);                     // DISTINCT in SQL
+        REQUIRE(list.size() == 1);                     // DISTINCT in SQL
     }
 }
 
-// Test - 07 : User flag count 1 & 2
+// Test - 07 : User flag count for fresh user
 TEST_CASE("getUserFlagCount returns 0 for fresh user"){
     DatabaseHandler db(MEM_DB);
     REQUIRE(db.isOpen());
-    db.saveOrder(mkOrder(1, "I1001", 100.0, 10, "BUY"));
+    db.saveOrder(mkOrder(701, "I1001", 100.0, 10, "BUY"));
 
     REQUIRE(db.getUserFlagCount("I1001") == 0);
     REQUIRE(db.getUserFlagCount("NOONE") == 0);     // unkown user = 0 too
 }
 
+// Test - 08 : User flag count for each risk events
 TEST_CASE("getUserFlagCount increments with each risk event"){
     DatabaseHandler db(MEM_DB);
     REQUIRE(db.isOpen());
-    db.saveOrder(mkOrder(1, "I1001", 100.0, 10, "BUY"));
+    db.saveOrder(mkOrder(801, "I1001", 100.0, 10, "BUY"));
+    db.saveOrder(mkOrder(802, "I1001", 100.0, 10, "BUY"));
+    db.saveOrder(mkOrder(803, "I1001", 100.0, 10, "BUY"));
 
     // 1st flag
-    db.saveRiskEvent("I1001", 1, 0.85, "suspicious", "WARN");
+    db.saveRiskEvent("I1001", 801, 0.85, "sus", "WARN");
     REQUIRE(db.getUserFlagCount("I1001") == 1);
 
     // 2nd flag
-    db.saveRiskEvent("I1001", 1, 0.87, "suspicious", "WARN");
+    db.saveRiskEvent("I1001", 802, 0.87, "sus", "WARN");
     REQUIRE(db.getUserFlagCount("I1001") == 2);
 
     // 3rd flag
-    db.saveRiskEvent("I1001", 1, 0.91, "escalated", "TEMP_BLOCK");
+    db.saveRiskEvent("I1001", 803, 0.91, "escalated", "TEMP_BLOCK");
     REQUIRE(db.getUserFlagCount("I1001") == 3);
 
     // other users are independent

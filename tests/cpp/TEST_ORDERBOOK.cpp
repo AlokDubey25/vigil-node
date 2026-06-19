@@ -23,19 +23,19 @@ TEST_CASE("addOrder rejects invalid input"){
     OrderBook book;
 
     SECTION("negative price"){
-        REQUIRE(book.addOrder(make(1,"U1", -5.0, 10, "BUY")) == false);
+        REQUIRE(book.addOrder(make(1,"I1", -5.0, 10, "BUY")) == false);
     }
     SECTION("zero qty"){
-        REQUIRE(book.addOrder(make(2,"U1", 100.0, 0, "BUY")) == false);
+        REQUIRE(book.addOrder(make(2,"I1", 100.0, 0, "BUY")) == false);
     }
     SECTION("empty uid"){
         REQUIRE(book.addOrder(make(3,"", 100.0, 10, "BUY")) == false);
     }
     SECTION("unkown side"){
-        REQUIRE(book.addOrder(make(4,"U1", 100.0, 10, "HOLD")) == false);
+        REQUIRE(book.addOrder(make(4,"I1", 100.0, 10, "HOLD")) == false);
     }
     SECTION("valid Order Accepted"){
-        REQUIRE(book.addOrder(make(5,"U1", 5.0, 10, "BUY")) == true);
+        REQUIRE(book.addOrder(make(5,"I1", 5.0, 10, "BUY")) == true);
     }
 }
 
@@ -43,16 +43,16 @@ TEST_CASE("addOrder rejects invalid input"){
 TEST_CASE("order book sorts correcrtly"){
     SECTION("BUY side highest price first"){
         OrderBook book;
-        book.addOrder(make(1, "U1", 100.0, 10, "BUY"));
-        book.addOrder(make(2, "U2", 102.5, 5, "BUY"));
-        book.addOrder(make(3, "U3", 101.0, 8, "BUY"));
+        book.addOrder(make(1, "I1", 100.0, 10, "BUY"));
+        book.addOrder(make(2, "I2", 102.5, 5, "BUY"));
+        book.addOrder(make(3, "I3", 101.0, 8, "BUY"));
         REQUIRE(book.getBestBidPrice() == Approx(102.5));
     }
     SECTION("SELL side lowest price first"){
         OrderBook book;
-        book.addOrder(make(4, "U4", 103.0, 10, "SELL"));
-        book.addOrder(make(5, "U5", 101.5, 5, "SELL"));
-        book.addOrder(make(6, "U6", 102.0, 8, "SELL"));
+        book.addOrder(make(4, "I4", 103.0, 10, "SELL"));
+        book.addOrder(make(5, "I5", 101.5, 5, "SELL"));
+        book.addOrder(make(6, "I6", 102.0, 8, "SELL"));
         REQUIRE(book.getBestAskPrice() == Approx(101.5));
     }
 }
@@ -61,38 +61,38 @@ TEST_CASE("order book sorts correcrtly"){
 TEST_CASE("matchOrders executes correctly"){
     SECTION("no match when bid less than ask") {
         OrderBook book;
-        book.addOrder(make(1,"U1",100.0,10,"BUY"));
-        book.addOrder(make(2,"U2",101.0,10,"SELL"));
+        book.addOrder(make(1,"I1",100.0,10,"BUY"));
+        book.addOrder(make(2,"I2",101.0,10,"SELL"));
         Trade result = book.matchOrders();
         REQUIRE(result.quantity == 0);
     }
     SECTION("match fires when bid >= ask") {
         OrderBook book;
-        book.addOrder(make(1,"U1",103.0,10,"BUY"));
-        book.addOrder(make(2,"U2",102.0,10,"SELL"));
+        book.addOrder(make(1,"I1",103.0,10,"BUY"));
+        book.addOrder(make(2,"I2",102.0,10,"SELL"));
         Trade result = book.matchOrders();
         REQUIRE(result.quantity > 0);
     }
     SECTION("full fill remove both orders") {
         OrderBook book;
-        book.addOrder(make(1,"U1",103.0,10,"BUY"));
-        book.addOrder(make(2,"U2",102.0,10,"SELL"));
+        book.addOrder(make(1,"I1",103.0,10,"BUY"));
+        book.addOrder(make(2,"I2",102.0,10,"SELL"));
         book.matchOrders();
         REQUIRE(book.hasBuys() == false);
         REQUIRE(book.hasSells() == false);
     }
     SECTION("partial fill : buyer has remainder") {
         OrderBook book;
-        book.addOrder(make(1,"U1",103.0,15,"BUY"));
-        book.addOrder(make(2,"U2",102.0,10,"SELL"));
+        book.addOrder(make(1,"I1",103.0,15,"BUY"));
+        book.addOrder(make(2,"I2",102.0,10,"SELL"));
         book.matchOrders();
         REQUIRE(book.hasBuys() == true);
         REQUIRE(book.hasSells() == false);
     }
     SECTION("partially fill : seller has remainder") {
         OrderBook book;
-        book.addOrder(make(1,"U1",102.0,10,"BUY"));
-        book.addOrder(make(2,"U2",101.0,10,"SELL"));
+        book.addOrder(make(1,"I1",102.0,10,"BUY"));
+        book.addOrder(make(2,"I2",101.0,15,"SELL"));
         book.matchOrders();
         REQUIRE(book.hasBuys() == false);
         REQUIRE(book.hasSells() == true);
