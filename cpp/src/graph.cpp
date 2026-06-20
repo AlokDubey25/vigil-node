@@ -6,7 +6,7 @@ void Graph::addEdge(const string& buyer, const string& seller) {
     adj_[buyer].insert(seller);
     // point to be noted that seller has an entry even with no outgoing edges
     if (adj_.find(seller) == adj_.end())
-        adj_[seller] == {};
+        adj_[seller] = {};
 }
 
 // it will be true if user is in a trading cycle (like kinda wash trade)

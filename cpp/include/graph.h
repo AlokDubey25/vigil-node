@@ -33,5 +33,5 @@ private:
     bool dfsCycle(const string& start, 
                   const string& current,
                   unordered_set<string>& visited,
-                  int depth, int maxDepth) const;,
-}
+                  int depth, int maxDepth) const;
+};

@@ -112,7 +112,7 @@ int main(){
             cerr<< "[WARN] order " << o.orderID << " not saved to DB\n";
 
         // this to remeber who owns this order for downstram graph anallystics
-        orderUsers[o.userID] = o.userID;
+        orderUsers[o.orderID] = o.userID;
 
         // b. blacklist check - fastest path, O(1)
         if (blocked.count(o.userID)) {
@@ -175,15 +175,16 @@ int main(){
     insertOrder(makeOrder(5, "I1005", 103.25,  5, "SELL"));
     insertOrder(makeOrder(6, "I1006", 106.00, 10, "SELL"));
 
-    std::cout << "\n=== wash trading demo orders ===\n";
 
-    // round 1: U2001 buys from U2002
-    insertOrder(makeOrder(10, "U2001", 105.00, 5, "BUY"));
-    insertOrder(makeOrder(11, "U2002", 104.50, 5, "SELL"));
+    cout << "\n==== wash trading demo orders ====\n";
 
-    // round 2: U2002 buys back from U2001  ← completes the cycle!
-    insertOrder(makeOrder(12, "U2002", 105.00, 5, "BUY"));
-    insertOrder(makeOrder(13, "U2001", 104.50, 5, "SELL"));
+    // round 1: I2001 buys from I2002
+    insertOrder(makeOrder(10, "I2001", 105.00, 5, "BUY"));
+    insertOrder(makeOrder(11, "I2002", 104.50, 5, "SELL"));
+
+    // round 2: I2002 buys back from I2001  ← completes the cycle!
+    insertOrder(makeOrder(12, "I2002", 105.00, 5, "BUY"));
+    insertOrder(makeOrder(13, "I2001", 104.50, 5, "SELL"));
 
     // 06 :- continuous loop to match the trade...
 
@@ -203,32 +204,35 @@ int main(){
         if (t.buyFilled)  db.updateOrderStatus(t.buyOrderID, "FILLED");
         if (t.sellFilled) db.updateOrderStatus(t.sellOrderID, "FILLED");
         tradeCount++;
-    }
-
-    // 07 :- Graph > look up user IDs and add edge
-    string buyer = orderUsers.count(t.buyOrderID) ? orderUsers[t.buyOrderID] : "?";
-    string seller = orderUsers.count(t.sellOrderID) ? orderUsers[t.sellOrderID] : "?";
     
-    tradeGraph.addEdge(buyer, seller);
-    cout<< "[GRAPH] edge: "<< buyer << " -> " << seller << "\n";
 
-    // check both ends of new edge for cycles
-    for (const auto& uid : {buyer, seller}){
-        if (tradeGraph.isInCycle(uid)) {
-            cout<< "[GRAPH] ▲ WASH TRADE DETECTED: "
-                << uid << " is in a circular pattern!!\n";
-            db.saveRiskEvent(uid, t.buyOrderID, 0.9, "circular trading network", "WARN");
+    // Graph : look up user IDs and add edge
+        string buyer = orderUsers.count(t.buyOrderID) ? orderUsers[t.buyOrderID] : "?";
+        string seller = orderUsers.count(t.sellOrderID) ? orderUsers[t.sellOrderID] : "?";
+        
+        tradeGraph.addEdge(buyer, seller);
+        cout<< "[GRAPH] edge: "<< buyer << " -> " << seller << "\n";
+
+        // check both ends of new edge for cycles
+        for (const auto& uid : {buyer, seller}){
+            if (tradeGraph.isInCycle(uid)) {
+                cout<< "[GRAPH] ▲ WASH TRADE DETECTED: "
+                    << uid << " is in a circular pattern!!\n";
+                db.saveRiskEvent(uid, t.buyOrderID, 0.9, "circular trading network", "WARN");
+            }
         }
     }
-}
 
 
 
-// PRINT FULL GRAPH SNAPSHOT
-cout<< "\n";
-tradeGraph.print();
-auto circular = tradeGraph.getCircularTraders();
-if (!circular.empty()){
-    cout<< "[GRAPH] " << circular.size()
-        << " users flagged for circular trading\n";
+    // PRINT FULL GRAPH SNAPSHOT
+    cout<< "\n[GRAPH] trading network:\n";
+    tradeGraph.print();
+    auto circular = tradeGraph.getCircularTraders();
+    if (!circular.empty()){
+        cout<< "[GRAPH] " << circular.size()
+            << " users flagged for circular trading\n";
+    }
+
+    return 0;
 }
