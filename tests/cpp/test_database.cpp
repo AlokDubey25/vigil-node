@@ -192,3 +192,24 @@ TEST_CASE("getUserFlagCount increments with each risk event"){
     // other users are independent
     REQUIRE(db.getUserFlagCount("I999") == 0);
 }
+
+TEST_CASE("getTradesPairs returns buyer-seller user IDs") {
+    DatabaseHandler db(MEM_DB);
+    REQUIRE(db.isOpen());
+
+    // two order needed before a trade can reference them
+    db.saveOrder(mkOrder(1, "I1001", 104.0, 10, "BUY"));
+    db.saveOrder(mkOrder(2, "I1001", 103.0, 10, "SELL"));
+
+    SECTION("empty when no trades") {
+        auto pairs = db.getTradePairs();
+        REQUIRE(pairs.empty());
+    }
+    SECTION("returns correct buyer and seller userIDs") {
+        Trade t = mkTrade(1, 2, 103.0, 10);
+        db.saveTrade(t);
+        auto pairs = db.getTradePairs();
+        REQUIRE(pairs[0].first  == "I1001");     // BUYERS
+        REQUIRE(pairs[0].second == "I2001");    // SELLER
+    }
+}
