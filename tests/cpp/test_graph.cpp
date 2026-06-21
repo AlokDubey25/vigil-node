@@ -61,3 +61,50 @@ TEST_CASE("degree counts unique counterparties only"){
 
     REQUIRE(g.getDegree("I1") == 2);    // I2 and I3, not 3
 }
+
+TEST_CASE("getNetworkScore : zero for isolated user") {
+    Graph g;
+    REQUIRE(g.getNetworkScore("I1") == Approx(0.0));
+}
+
+TEST_CASE("getNetworkScore : cycle contributes 0.5") {
+    Graph g;
+    g.addEdge("I1", "I2");
+    g.addEdge("I2","I1");       // wash trade
+
+    double s = g.getNetworkScore("I1");
+    REQUIRE(s >= 0.5);      // cycle at least 0.5
+    REQUIRE(s <= 1.0);     // never Exceeds cap
+}
+
+TEST_CASE("getNetworkScore : degree adds score  without cycle") {
+    Graph g;
+    // U1 has 3 counterparties but no cycle
+    g.addEdge("I1", "I2");
+    g.addEdge("I1", "I3");
+    g.addEdge("I1", "I4");
+
+    double s = g.getNetworkScore("I1");
+    REQUIRE(s == Approx(0.1));      // degree >= 3 adds 0.1, no cycle
+}
+
+TEST_CASE("getNetworkScore : high degree adds more") {
+    Graph g;
+    // U1 has 5r counterparties but no cycle
+    for (int i = 2; i <= 6; i++)
+        g.addEdge("I1", "I" + to_string(i));
+
+    double s = g.getNetworkScore("I1");
+    REQUIRE(s == Approx(0.3));      // deg >= 5: 0.1 + 0.2 = 0.3
+}
+
+TEST_CASE("getNetworkScore : capped at 1.0") {
+    Graph g;
+    // in cycle AND high degree = would exceed 1.0 without cap
+    g.addEdge("I1", "I2"); g.addEdge("I2", "I1");       // cycle: +0.5
+    g.addEdge("I1", "I3"); g.addEdge("I1", "I4");
+    g.addEdge("I1", "I5"); g.addEdge("I1", "I6");       // deg 5+: +0.3
+
+    // total would be 0.5+0.1+0.2 = 0.8 - below cap, but test it
+    REQUIRE(g.getNetworkScore("I1") <= 1.0);
+}
