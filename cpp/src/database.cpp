@@ -274,3 +274,38 @@ int DatabaseHandler::getUserFlagCount(const string& userID){
     sqlite3_finalize(stmt);
     return count;
 }
+
+vector<pair <string, string >> DatabaseHandler::getTradePairs() {
+    vector<pair <string, string >> pairs;
+    if (!db_) return pairs;
+
+    // JOIN trades with orders twice - once per side of trade o1 = the buy order, o2 = the sell order
+    const char* sql = 
+        "SELECT o1.userID, o2.userID"
+        "   FROM trades t"
+        "   JOIN orders o1 ON t.buyOrderID = o1.orderID"
+        "   JOIN orders o2 ON t.sellOrderID = o2.orderID";
+
+    sqlite3_stmt* stmt = nullptr;
+    int rc = sqlite3_prepare_v2(db_, sql, -1, &stmt, nullptr);
+    if (rc != SQLITE_OK) {
+        cerr<< "[DB] getTradePairs: "
+            << sqlite3_errmsg(db_) << "\n";
+        
+        return pairs;
+    }
+
+    while (sqlite3_step(stmt) == SQLITE_ROW) {
+        const char* buyer  = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 0));
+        const char* seller = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 1));
+    
+        if (buyer && seller) 
+            pair.emplace_back(buyer, seller);
+    }
+
+    sqlite3_finalize(stmt);
+    cout<< "[DB] loaded " << pairs.size()
+        << " historical trade pairs for graph\n";
+
+    return pairs;
+}

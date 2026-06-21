@@ -75,6 +75,17 @@ int main(){
 
     unordered_map<int, string> orderUsers;
 
+    auto historicPairs = db.getTradePairs();
+    for (const auto& [buyer, seller] : historicPairs) {
+        tradeGraph.addEdge(buyer, seller);  // it will rebuild irderUsers from DB for graph - partial
+    }
+    if (!historicPairs.empty()) {
+        cout<< "[GRAPH] rebuilt"
+            << historicPairs.size()
+            << " edges from DB history\n";
+    }
+
+
     auto makeOrder = [](int id, const string& user,
                         double price, int qty,
                         const string& side){
@@ -133,33 +144,41 @@ int main(){
         FeatureVector fv = extractor.extract(o, midPrice);
         fv.print(o.userID);
 
-        // e. Send features to Py ML bridge and print score here...!!
+        // e. ML score form py bridge
         double mlScore = bridge.score(fv.toJSON());
-        cout<< "        [ML] score: "<< fixed << setprecision(4) << mlScore << "\n";
                
-        // f. verdict
-        if (mlScore > THRESHOLD){
+        // f. graph network score form trading history
+        double graphScore = tradeGraph.getNetworkScore(o.userID);
+
+        // g. combined score - but ML is weighted heavier (cuz its trained)
+        // here graph will adds signal from network patterns which ML cna't see through
+        double combined = (mlScore * 0.7) + (graphScore * 0.3);
+
+        cout<< "    [ML]    score="
+            << fixed << setprecision(4) << mlScore << "\n"
+            << "    [GRAPH] score=" << graphScore  << "\n"
+            << "    [FINAL] score=" << combined    << "\n";
+
+
+
+
+
+        // h. verdict against combined score
+        if (combined > THRESHOLD){
             string action = escalate(o.userID);
 
             cout<< "[FLAGGED] " << o.userID
-                << " score = "  << mlScore
+                << " score = "  << combined
                 << " action = " << action << "\n";
 
             db.updateOrderStatus(o.orderID, "REJECTED");
-            db.saveRiskEvent(o.userID, o.orderID, mlScore, "ML score above threshold", action);
+            db.saveRiskEvent(o.userID, o.orderID, combined, "Combined ML+graph score", action);
 
-            // if permanent : add to in-memory set immeditately
-            // next order from this user is rejected without even begin scored
-            if (action == "PERMANENT_BLOCK") {
-                blocked.insert(o.userID);
-                cout<< "[BLACKLISTED]" << o.userID
-                    << " added to permanent blacklist\n";
-            }
             return;
         }
 
         // g. add to order book
-        cout << "[ALLOWED] " << o.userID << " enters book\n"; 
+        cout << "[ALLOWED] " << o.userID << "\n"; 
         book.addOrder(o);
     };
 
