@@ -24,6 +24,9 @@ public:
     // debug - print full trade network
     void print() const;
 
+    // network based fraud scrore 0.0-1.0 where 0.5 if in a cycle + 0.1/0.2 for high degree
+    // capped at 1.0
+    double getNetworkScore(const string& userID) const;
 
 private:
     // adjust user - set of users has brought FROM
