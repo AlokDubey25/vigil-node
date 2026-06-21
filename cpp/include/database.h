@@ -31,7 +31,7 @@ public:
 
     int getUserFlagCount(const string& userID);     // it is to decide WARN -> TEMP -> PERM
 
-    vector<pair<string>> getTradePairs();           // it will return buyers and sellers userid for all trades and will be used at startup to rebuild trading network
+    vector<pair<string, string>> getTradePairs();    // it will return buyers and sellers userid for all trades and will be used at startup to rebuild trading network
 
     private:
         sqlite3* db_ = nullptr;

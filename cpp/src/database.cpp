@@ -300,7 +300,7 @@ vector<pair <string, string >> DatabaseHandler::getTradePairs() {
         const char* seller = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 1));
     
         if (buyer && seller) 
-            pair.emplace_back(buyer, seller);
+            pairs.emplace_back(buyer, seller);
     }
 
     sqlite3_finalize(stmt);

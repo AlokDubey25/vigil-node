@@ -77,7 +77,7 @@ bool Graph::dfsCycle(const string& start, const string& current, unordered_set<s
 }
 
 double Graph::getNetworkScore(const string& userID) const{
-    doubel score = 0.0;
+    double score = 0.0;
 
     // biggest signal : if this user in circular trading pattern then wash trading = artificially infalting volume , highly sus
     if (isInCycle(userID)) score += 0.5;
