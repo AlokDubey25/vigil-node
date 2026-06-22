@@ -177,7 +177,7 @@ int main(){
             return;
         }
 
-        // g. add to order book
+        // i. add to order book
         cout << "[ALLOWED] " << o.userID << "\n"; 
         book.addOrder(o);
     };
@@ -233,11 +233,24 @@ int main(){
         cout<< "[GRAPH] edge: "<< buyer << " -> " << seller << "\n";
 
         // check both ends of new edge for cycles
-        for (const auto& uid : {buyer, seller}){
-            if (tradeGraph.isInCycle(uid)) {
-                cout<< "[GRAPH] ▲ WASH TRADE DETECTED: "
-                    << uid << " is in a circular pattern!!\n";
-                db.saveRiskEvent(uid, t.buyOrderID, 0.9, "circular trading network", "WARN");
+        bool ringDetected = tradeGraph.isInCycle(buyer) || tradeGraph.isInCycle(seller);
+
+        if (ringDetected) {
+            // find all connected to this ring via BFS
+            auto component = tradeGraph.getConnectedComponent(buyer);
+            cout<< "[RING] wash trade ring detected - "
+                << component.size() << " members:\n";\
+
+            for (const auto& member : component) {
+                // only flag users confiremed to be in cycle
+                if (tradeGraph.isInCycle(member)) {
+                    cout << " [RING] flagging " << member << "\n";
+                    db.saveRiskEvent(member, t.buyOrderID, 0.9, "circular trading ring detected", "WARN");
+                } else {
+                    // connected but not in cycle - may be innocent counterparty
+                    cout<< "  [RING] connected: " << member
+                        << " (no direct cycle with them)\n";
+                }
             }
         }
     }
