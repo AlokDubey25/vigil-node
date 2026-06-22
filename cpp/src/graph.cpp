@@ -90,4 +90,57 @@ double Graph::getNetworkScore(const string& userID) const{
 
     // cap to [0.0,1.0]
     return min(score, 1.0);
+} 
+
+vector<string> Graph::getConnectedComponent(const string& userID) const{
+    vector<string> component;
+
+    if (adj_.find(userID) == adj_.end()) return component;
+
+    // build reverse adj onnce so we can traverse both dir
+    unordered_map<string, unordered_set<string>> rev;
+    for (const auto& [u, neighbours] : adj_)
+        for (const auto& v : neighbours)
+            rev[v].insert(u);
+
+    // BFS - visit forward and reserve neighbors at each step
+    unordered_set<string> visited;
+    queue<string> bfsQ;
+    visited.insert(userID);
+    bfsQ.push(userID);
+
+    while (!bfsQ.empty()) {
+        auto curr = bfsQ.front(); bfsQ.pop();
+        component.push_back(curr);
+
+        // forward: who has curr bought from?
+        auto fwd = adj_.find(curr);
+        if (fwd != adj_.end()) {
+            for (const auto& n : fwd -> second) 
+                if (!visited.count(n)) { visited.insert(n); bfsQ.push(n); }
+        }
+
+        // reverse: who has brought from curr?
+        auto r = rev.find(curr);
+        if (r != rev.end()) {
+            for (const auto& n : r-> second)
+                if (!visited.count(n)) {visited.insert(n); bfsQ.push(n); }
+        }
+    }
+
+    return component;
+}
+
+string Graph::getSummary() const {
+    int nodes = static_cast<int>(adj_.size());
+    int edges = 0;
+    for (const auto& [_, n] : adj_) edges += static_cast<int>(n.size())l
+    auto circ = getCircularTraders();
+
+    ostringstream oss;
+    oss << "nodes=" << nodes
+        << " edges=" << edges
+        << " circular_traders=" << circ.size();
+
+    return oss.str();
 }

@@ -1,3 +1,5 @@
+# Inlogs
+
 ## orders
 
 Every order that enters the engine gets one row here.
@@ -13,8 +15,8 @@ Updated by: database.cpp updateOrderStatus()
 | side       | TEXT    | "BUY" or "SELL"                     |
 | timestamp  | INTEGER | unix epoch seconds                  |
 | status     | TEXT    | PENDING → FILLED or REJECTED        |
-| blockScore | REAL    | ML fraud score 0.0–1.0 (Phase 4)   |
-| fraudFlag  | INTEGER | 0 = safe, 1 = flagged (Phase 6)    |
+| blockScore | REAL    | ML fraud score 0.0–1.0 (Phase 4)    |
+| fraudFlag  | INTEGER | 0 = safe, 1 = flagged (Phase 6)     |
 
 ---
 
@@ -23,7 +25,7 @@ Updated by: database.cpp updateOrderStatus()
 One row per executed trade.
 Written by: database.cpp saveTrade()
 
-| column      | type    | notes                              |
+| column      | type    | notes                               |
 |-------------|---------|-------------------------------------|
 | tradeID     | INTEGER | auto-increment, DB assigns          |
 | buyOrderID  | INTEGER | FK → orders.orderID                 |
