@@ -10,7 +10,7 @@ into the book or blocked before execution.
 
 ## layer overview
 
-```
+``` architecture
                     ┌─────────────────────────────┐
   order in ──────→  │  C++ Engine (main.cpp)       │
                     │  OrderBook + DatabaseHandler  │
@@ -35,6 +35,7 @@ into the book or blocked before execution.
 ## components built
 
 ### OrderBook  (cpp/src/orderbook.cpp)
+
 - BUY book: std::map>
 - SELL book: std::map
 - keys in paise (price × 100) — exact integer comparison
@@ -43,6 +44,7 @@ into the book or blocked before execution.
 - all Catch2 tested in tests/cpp/test_orderbook.cpp
 
 ### DatabaseHandler  (cpp/src/database.cpp)
+
 - opens vigil.db, creates 3 tables if not exist
 - WAL journal mode for concurrent read+write
 - saveOrder(), saveTrade(), saveRiskEvent(), updateOrderStatus()
@@ -53,7 +55,7 @@ into the book or blocked before execution.
 
 ## data flow — current state
 
-```
+``` architecture
 order arrives
     → saveOrder(status=PENDING)
     → addOrder() into std::map
@@ -78,7 +80,7 @@ order arrives
 
 ## file layout
 
-```
+``` architecture
 cpp/include/   ← headers (contracts)
 cpp/src/       ← implementations
 cpp/vendor/    ← sqlite3 amalgamation
