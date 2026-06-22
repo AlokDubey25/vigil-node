@@ -108,3 +108,44 @@ TEST_CASE("getNetworkScore : capped at 1.0") {
     // total would be 0.5+0.1+0.2 = 0.8 - below cap, but test it
     REQUIRE(g.getNetworkScore("I1") <= 1.0);
 }
+
+TEST_CASE("getConnectedComponent finds all nodes in one connected group") {
+    Graph g;
+    g.addEdge("I1", "I2");
+    g.addEdge("I2", "I1");         // I1 and I2 in a cycle
+    g.addEdge("I2", "I3");        // I3 connected to ring
+
+    auto comp = g.getConnectedComponent("I1");
+    REQUIRE(comp.size() == 3);  // I1, I2, I3
+}
+
+TEST_CASE("getConnectedComponent isolated node returns only itself") {
+    Graph g;
+    g.addEdge("I1", "I2");
+    g.addEdge("I3", "I4");      // separate component
+
+    auto comp = g.getConnectedComponent("I1");
+    REQUIRE(comp.size() == 2);  // I1 and I2 only - no path to I3 or I4
+
+    auto comp2 = g.getConnectedComponent("I3");
+    REQUIRE(comp2.size() == 2); // I3 and I4 only
+}
+
+TEST_CASE("getConnectedComponet traverses reverse edges too") {
+    Graph g;
+    g.addEdge("I1", "I2");      // I1 -> I2 (directed)
+    // starting from I2, reverse edge should find I1
+    auto comp = g.getConnectedComponent("I2")l
+    REQUIRE(comp.size() == 2);  // BOTH I1 & I2
+}
+
+TEST_CASE("getSummary returns correct node and edge counts") {
+    Graph g;
+    g.addEdge("I1", "I2");
+    g.addEdge("I2", "I1");
+
+    string s = g.getSummary();
+    REQUIRE(s.find("nodes=2") != string::npos);
+    REQUIRE(s.find("edges=2") != string::npos);
+    REQUIRE(s.find("circular_trades=2") != string::npos);
+}
