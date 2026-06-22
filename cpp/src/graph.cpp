@@ -134,7 +134,7 @@ vector<string> Graph::getConnectedComponent(const string& userID) const{
 string Graph::getSummary() const {
     int nodes = static_cast<int>(adj_.size());
     int edges = 0;
-    for (const auto& [_, n] : adj_) edges += static_cast<int>(n.size())l
+    for (const auto& [_, n] : adj_) edges += static_cast<int>(n.size());
     auto circ = getCircularTraders();
 
     ostringstream oss;

@@ -135,7 +135,7 @@ TEST_CASE("getConnectedComponet traverses reverse edges too") {
     Graph g;
     g.addEdge("I1", "I2");      // I1 -> I2 (directed)
     // starting from I2, reverse edge should find I1
-    auto comp = g.getConnectedComponent("I2")l
+    auto comp = g.getConnectedComponent("I2");
     REQUIRE(comp.size() == 2);  // BOTH I1 & I2
 }
 
