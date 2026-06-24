@@ -149,5 +149,3 @@ TEST_CASE("getSummary returns correct node and edge counts") {
     REQUIRE(s.find("edges=2") != string::npos);
     REQUIRE(s.find("circular_trades=2") != string::npos);
 }
-
-// tried to find other error but failed and due to illnes work din't progressed much

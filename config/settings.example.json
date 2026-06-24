@@ -7,5 +7,9 @@
     "bridge_timeout_ms"       :  100,
     "blacklist_warn_threshold": 1,
     "blacklist_temp_threshold": 3,
-    "blacklist_perm_threshold": 5
+    "blacklist_perm_threshold": 5,
+
+    "ml_weight"               : 0.70,      
+    "graph_weight"            : 0.30,
+    "cycle_base_score"        : 0.50
 } 

@@ -144,3 +144,15 @@ string Graph::getSummary() const {
 
     return oss.str();
 }
+
+double Graph::getNetworkScore(const string& userID) const {
+    double score = 0.0;
+    if (isInCycle(userID)) score += cycleBase_;
+
+    int deg = getDegree(userID);
+
+    if (deg >= 3) score += 0.1;
+    if (deg >= 5) score += 0.2;
+
+    return min(score, 1.0);
+}

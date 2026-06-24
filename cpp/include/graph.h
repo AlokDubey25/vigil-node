@@ -35,6 +35,11 @@ public:
 
     // sting for logging and dashboard
     string getSummary() const;
+
+    // configures the cycle detection score weight
+    void setCycleBaseScore(double score) { cycleBase_ = score;}
+
+
     
 
 private:
@@ -46,4 +51,7 @@ private:
                   const string& current,
                   unordered_set<string>& visited,
                   int depth, int maxDepth) const;
+
+    // same as settings.example.json
+    double cycleBase_ = 0.5;
 };
