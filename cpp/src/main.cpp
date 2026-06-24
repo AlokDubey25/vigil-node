@@ -22,14 +22,18 @@ int main(){
     if (!cfg.isLoaded())
         cerr<< "[WARN] using hardcoded defaults\n";
 
-    // read all thresholds from config with safe fallbacks
-    const double THRESHOLD = cfg.getDouble("fraud_threshold",       0.80);
-    const int    TEMP_AT   = cfg.getInt   ("blacklist_temp_threshold", 3);
-    const int    PERM_AT   = cfg.getInt   ("blacklist_perm_threshold", 5);
+    // read all thresholds along with others from config with safe fallbacks
+    const double THRESHOLD    = cfg.getDouble("fraud_threshold",       0.80);
+    const int    TEMP_AT      = cfg.getInt   ("blacklist_temp_threshold", 3);
+    const int    PERM_AT      = cfg.getInt   ("blacklist_perm_threshold", 5);
+    const double ML_WEIGHT    = cfg.getDouble("ml_weight",             0.70);
+    const double GRAPH_WEIGHT = cfg.getDouble("graph_weight",          0.30);
+    const double CYCLE_BASE   = cfg.getDouble("cycle_base_score",      0.50);
 
-    cout<< "[CONFIG] fraud_threshold = " << THRESHOLD
-        << "    temp_at = " << TEMP_AT
-        << "    perm_at = " << PERM_AT << "\n";
+
+    cout<< "[CONFIG] ml_weight=" << ML_WEIGHT
+        << "      graph_weight=" << GRAPH_WEIGHT
+        << "      cycle_base="   << CYCLE_BASE << "\n";
 
 
 
@@ -42,24 +46,7 @@ int main(){
     unordered_set<string> blocked(blacklist.begin(), blacklist.end());
     cout<< "[ENIGINE]" << blacklist.size() << " users on permanent blacklist\n";
 
-/*
-    // demo -> add a known-bad user so we can see blocking in action in production this comes from past sessions in risk_log
-    {
-        Order demo = {99, "U_FRAUD_BOT", 100.0, 1, "BUY",
-                      static_cast<long long>(time(nullptr)),
-                      "PENDING", 0.0, false};
-        
-        db.saveOrder(demo);
-        db.saveRiskEvent("U_FRAUD_BOT", 99, 0.99, "confirmed fraud bot", "PERMANENT_BLOCK");
-
-        // reload so U_FRAUD_BOT appears in set
-        blacklist = db.loadBlacklist();
-        blocked.clear();
-        blocked.insert(blacklist.begin(), blacklist.end());
-    }
-*/
     
-        
 
     // 03 :- Python bridge which is added now - it launched once, stays runnig
     // run ./vigil from project root so the path resolves correctly
@@ -73,6 +60,8 @@ int main(){
     FeatureExtractor extractor;
     Graph tradeGraph;
 
+    tradeGraph.setCycleBaseScore(CYCLE_BASE)
+    
     unordered_map<int, string> orderUsers;
 
     auto historicPairs = db.getTradePairs();
@@ -152,7 +141,7 @@ int main(){
 
         // g. combined score - but ML is weighted heavier (cuz its trained)
         // here graph will adds signal from network patterns which ML cna't see through
-        double combined = (mlScore * 0.7) + (graphScore * 0.3);
+        double combined = (mlScore * ML_WEIGHT) + (graphScore * GRAPH_WEIGHT);
 
         cout<< "    [ML]    score="
             << fixed << setprecision(4) << mlScore << "\n"
@@ -259,6 +248,9 @@ int main(){
 
     // PRINT FULL GRAPH SNAPSHOT
     cout<< "\n[GRAPH] trading network:\n";
+
+    cout<< "\n[GRAPH] session summary: "
+        << tradeGraph.getSummary() << "\n";
     tradeGraph.print();
     auto circular = tradeGraph.getCircularTraders();
     if (!circular.empty()){
