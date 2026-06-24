@@ -149,3 +149,21 @@ TEST_CASE("getSummary returns correct node and edge counts") {
     REQUIRE(s.find("edges=2") != string::npos);
     REQUIRE(s.find("circular_trades=2") != string::npos);
 }
+
+TEST_CASE("setCycleBaseScore changes the cycle contribution") {
+    Graph g;
+    g.addEdge("I1", "I2");
+    g.addEdge("I2", "I1");  // cycle
+
+    SECTION("default cycleBase = 0.5") {
+        REQUIRE(g.getNetworkScore("I1") == Approx(0.5));
+    }
+    SECTION("custom cycleBase = 0.7") {
+        g.setCycleBaseScore(0.7);
+        REQUIRE(g.getNetworkScore("I1") == Approx(0.7));
+    }
+    SECTION("custom cycleBase = 0.3") {
+        g.setCycleBaseScore(0.3);
+        REQUIRE(g.setCycleBaseScore("I1") == Approx(0.3));
+    }
+}
