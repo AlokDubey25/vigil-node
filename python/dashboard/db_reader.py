@@ -30,4 +30,36 @@ def get_engine_stats() -> Dict[str, Any]:
     finally:
         conn.close()
 
-               
+
+def get_risk_log(limit: int = 10) -> List[Dict]:
+    """Panel 3 - latest risk events."""
+    conn = _connect()
+    if not conn: return[]
+    try:
+        rows = conn.execute(
+            """SELECT logID, userID, fraudScore, action, reason
+               FROM risk_log ORDER BY logID DESC LIMIT ?""", (limit,)
+        ).fetchall()
+        return [dict(r) for r in rows]
+    finally:
+        conn.close()
+
+def get_book_snapshot(limit: int = 5) -> Dict[str, List[Dict]]:
+    """Panel 4 - pending orders by side, sorted by price."""
+    conn = _connect()
+    if not conn: return {"BUY":[], "SELL":[]}
+    try:
+        buys = conn.execute(
+            """SELECT price, quantity, userID FROM orders
+               WHERE side='BUY' AND status='PENDING'
+               ORDER BY price DESC LIMIT ?""", (limit,)
+        ).fetchall()
+        sells = conn.execute(
+            """SELECt price, quantity, userID FROM orders
+               WHERE side='SELL' AND status='PENDING'
+               ORDER BY price DESC LIMIT ?""", (limit,)
+        ).fetchall()
+        return {"BUY" :[dict(r) for r in buys],
+                "SELL":[dict(r) for r in sells]}
+    finally:
+        conn.close()
