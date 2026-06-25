@@ -30,6 +30,18 @@ def get_engine_stats() -> Dict[str, Any]:
     finally:
         conn.close()
 
+def get_recent_orders(limit: int = 10) -> List[Dict]:
+    """Panel 2 - latest orders."""
+    conn = _connect()
+    if not conn : return []
+    try:
+        rows = conn.execute(
+            """SELECT orderID, userID, price, quantity, side, status
+               FROM orders ORDER BY orderID DESC LIMIT ?""", (limit,)
+        ).fetchall()
+        return [dict(r) for r in rows]
+    finally:
+        conn.close()
 
 def get_risk_log(limit: int = 10) -> List[Dict]:
     """Panel 3 - latest risk events."""
