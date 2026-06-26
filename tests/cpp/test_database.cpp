@@ -213,3 +213,4 @@ TEST_CASE("getTradesPairs returns buyer-seller user IDs") {
         REQUIRE(pairs[0].second == "I2001");    // SELLER
     }
 }
+// error in passing test still
