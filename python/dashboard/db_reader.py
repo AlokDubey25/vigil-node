@@ -1,5 +1,6 @@
 import sqlite3, os
 from typing import List, Dict, Any
+import time
 
 DB_PATH = os.path.join(os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")), "vigil.db")
 
@@ -75,3 +76,66 @@ def get_book_snapshot(limit: int = 5) -> Dict[str, List[Dict]]:
                 "SELL":[dict(r) for r in sells]}
     finally:
         conn.close()
+
+def get_engine_status() -> Dict[str, Any]:
+    """Header bar - is the Cpp engine writing right now?"""
+    conn = _connect()
+    if not conn:
+        return {"online": False, "last_write": None}
+    
+    try:
+        row = conn.execute("SELECT MAX(timestamp) FROM orders").fetchone()
+        last_ts = row[0] if row else None
+        if last_ts is None:
+            return {"online": False, "last_write": None}
+        # "online" = something was written in last 10 seconds
+        online = (int(time.time()) - last_ts) <= 10
+        return {"online": online, "last_write": last_ts}
+    finally:
+        conn.close()
+
+def get_graph_data() -> Dict[str, Any]:
+    """Graph panel - recent trade edges + which users are in a ring."""
+    conn = _connect()
+    if not conn:
+        return {"edges": [], "ring_members": set()}
+    
+    try:
+        # same JOIN pattern as getTradePairs() in Cpp - last 10 trades only
+        rows = conn.execute(
+            """SELECT o1.userID, o2.userID
+               FROM trades t
+               JOIN orders o1 ON t.buyOrderID = o1.orderID
+               JOIN orders o2 ON t.sellOrderID = o2.orderID
+               ORDER BY t.tradeID DESC LIMIT 10"""
+        ).fetchall()
+        edges = [(r[0], r[1]) for r in rows]
+
+        # anyone flagged with a "ring" or "circular" 
+        ring_rows = conn.execute(
+            """SELECT DISTINCT userID FROM risk_log
+               WHERE reason LIKE '%ring%' OR reason LIKE '%circular%'"""
+        ).fetchall()
+        ring_members = {r[0] for r in ring_rows}
+
+        return {"edges": edges, "ring_member": ring_members}
+    finally:
+        conn.close()
+
+
+def get_change_marker() -> tuple:
+    """Cheap poll - has anything changed since we last redrew?"""
+    conn = _connect()
+    if not conn:
+        return(0, 0)
+    
+    try:
+        max_order = conn.execute(
+            "SELECT COALESCE(MAX(orderID), 0) FROM orders").fetchone()[0]
+        max_log = conn.execute(
+            "SELECT COALSCE(MAX(logID), 0) FROM risk_log").fetchone()[0]
+        
+        return (max_order, max_log)
+    finally:
+        conn.close()
+        
