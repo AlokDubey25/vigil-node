@@ -133,9 +133,8 @@ def get_change_marker() -> tuple:
         max_order = conn.execute(
             "SELECT COALESCE(MAX(orderID), 0) FROM orders").fetchone()[0]
         max_log = conn.execute(
-            "SELECT COALSCE(MAX(logID), 0) FROM risk_log").fetchone()[0]
+            "SELECT COALESCE(MAX(logID), 0) FROM risk_log").fetchone()[0]
         
         return (max_order, max_log)
     finally:
         conn.close()
-        

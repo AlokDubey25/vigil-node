@@ -200,7 +200,7 @@ def main():
     last_heartbeat = 0.0
 
     try:
-        with Live(build_full_layout(), console=console,
+        with Live(build_full_layout(threshold), console=console,
                   refresh_per_second=1, screen=False) as live:
             while True:
                 time.sleep(0.5)
