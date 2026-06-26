@@ -1,5 +1,6 @@
 import time, sys, os
 from datetime import datetime
+import json
 
 from rich.console   import Console
 from rich.table     import Table
@@ -14,8 +15,10 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../.
 
 from python.dashboard.db_reader import (
     get_engine_stats, get_recent_orders,
-    get_risk_log, get_book_snapshot
+    get_risk_log, get_engine_status,
+    get_book_snapshot, get_change_marker, get_graph_data
 )
+
 REFRESH_SECS = 1
 
 
@@ -117,57 +120,98 @@ def build_book_panel() -> Panel:
 
 
 
-'''
-# MAIN : BUILDING FULL LAYOUT AND RUN LIVE REFRESH
-def build_layout():
-    return Layout(
-        Layout(
-            Layout(build_stats_panel(), name="stats"),
-            Layout(build_orders_panel(), name="orders"),
-            direction="horizontal", ratio=1
-        ),
-        Layout(
-            Layout(build_risk_panel(), name="risk"),
-            Layout(build_book_panel(), name="book"),
-            direction="horizontal", ratio=1,
-        ),
-        direction="vertical"
+def load_threshold() -> float:
+    """Read fraud_threshold straight from settings.json for the header."""
+    path = os.path.join(
+        os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")), "config/settings.json"
     )
-'''
+    try:
+        with open(path) as f:
+            return json.load(f).get("fraud_threshold", 0.80)
+    except Exception:
+        return 0.80     # same fallback the Cpp Config class uses
+    
 
-def build_layout():
+def build_header(threshold: float) -> Panel:
+    status = get_engine_status()
+    now = datetime.now().strftime("%H:%M:%S")
+    status_text = ("[green]• ENGINE ONLINE[/green]" if status["online"]
+                   else "[red]• ENGINE OFFLINE[/red]")
+    text = (f"[bold cyan]VIGIL NODE[/bold cyan]     {now}   "
+            f"{status_text}     threshold={threshold}")
+    return Panel(text, border_style="dim")
+
+def build_graph_panel() -> Panel:
+    data = get_graph_data()
+    lines = []
+    for buyer, seller in data["edges"]:
+        in_ring = (buyer in data["ring_member"] and 
+                   seller in data["ring_member"])
+        maker = "   [red] ⚠ CYCLE[/red]" if in_ring else ""
+        lines.append(f"{buyer} [dim]->[/dim] {seller}{maker}")
+
+    if not lines:
+        lines = ["[dim] no trades yet[/dim]"]
+
+    nodes = len({u for e in data["edges"] for u in e})
+    footer = (f"\n[dim]{nodes} nodes • {len(data['edges'])} edges • "
+              f"{len(data['ring_member'])} ring member[/dim]")
+    
+    body = "\n".join(lines) + footer
+    return Panel(body, title="[bold magenta] Trading Network[/bold magenta]",
+                 border_style="magenta")
+
+
+
+
+# MAIN : BUILDING FULL LAYOUT AND RUN LIVE REFRESH
+def build_full_layout(threshold: float) -> Layout:
     root = Layout()
 
     root.split_column(
-        Layout(name="top_row", ratio=1),
-        Layout(name="bottom_row", ratio=1)
+        Layout(build_header(threshold), name="header", size=3),
+        Layout(name="body", ratio=1)
     )
-
+    root["body"].split_column(
+        Layout(name="top_row"),
+        Layout(name="bottom_row")
+    )
     root["top_row"].split_row(
-        Layout(build_stats_panel(), name="stats"),
+        Layout(build_stats_panel(),  name="stats"),
         Layout(build_orders_panel(), name="orders")
     )
     root["bottom_row"].split_row(
-        Layout(build_risk_panel(), name="risk"),
-        Layout(build_book_panel(), name="book")
+        Layout(build_risk_panel(),  name="risk"),
+        Layout(build_graph_panel(), name="graph")
     )
-    
+
     return root
 
 
 
 def main():
     console = Console()
-    now = datetime.now().strftime("%H:%M:%S")
-    console.print(f"[bold cyan]Vigil Node Dashboard[/] - started {now}")
+    threshold = load_threshold()
+    now_str = datetime.now().strftime("%H:%M:%S")
+    console.print(f"[bold cyan]Vigil Node Dashboard[/] - started {now_str}")
     console.print("Ctrl+C to exit\n")
 
+    last_marker = (-1, -1)
+    last_heartbeat = 0.0
+
     try:
-        with Live(build_layout(), console=console,
+        with Live(build_full_layout(), console=console,
                   refresh_per_second=1, screen=False) as live:
             while True:
-                time.sleep(REFRESH_SECS)
-                live.update(build_layout())
+                time.sleep(0.5)
+                marker = get_change_marker()
+                now = time.time()
+                
+                # redraw if data changed, OR every 5s anyway (clock/stsus heartbeat)
+                if marker != last_marker or (now - last_heartbeat) >= 5:
+                    live.update(build_full_layout(threshold))
+                    last_marker     = marker
+                    last_heartbeat  = now
     except KeyboardInterrupt:
         console.print("\n[dim]Dashboard stopped[/dim]")
 
