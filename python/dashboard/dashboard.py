@@ -1,6 +1,7 @@
 import time, sys, os
 from datetime import datetime
 import json
+import threading, termios, tty, select
 
 from rich.console   import Console
 from rich.table     import Table
@@ -20,6 +21,8 @@ from python.dashboard.db_reader import (
 )
 
 REFRESH_SECS = 1
+_paused      = threading.Event()
+_quit_now    = threading.Event()
 
 
 # PANEL - 01 : ENGINE STATS
@@ -161,8 +164,23 @@ def build_graph_panel() -> Panel:
     return Panel(body, title="[bold magenta] Trading Network[/bold magenta]",
                  border_style="magenta")
 
-
-
+def _keyboard_listener():
+    """Runs in a background thread - reads single keypreses without Enter."""
+    fd  = sys.stdin.fileno()
+    old = termios.tcgetattr(fd)
+    try:
+        tty.setcbreak(fd)
+        while not _quit_now.is_set():
+            # select with 0.2s timeout - don't block forever, check quit flag often
+            if select.select([sys.stdin], [], [], 0.2)[0]:
+                ch = sys.stdin.read(1)
+                if ch == 'q':
+                    _quit_now.set()
+                elif ch == 'p':
+                    if _paused.is_set(): _paused.clear()
+                    else:                _paused.set()
+    finally:
+        termios.tcsetattr(fd, termios.TCSADRAIN, old)
 
 # MAIN : BUILDING FULL LAYOUT AND RUN LIVE REFRESH
 def build_full_layout(threshold: float) -> Layout:
@@ -196,23 +214,27 @@ def main():
     console.print(f"[bold cyan]Vigil Node Dashboard[/] - started {now_str}")
     console.print("Ctrl+C to exit\n")
 
-    last_marker = (-1, -1)
-    last_heartbeat = 0.0
+    listener = threading.Thread(target=_keyboard_listener, daemon=True)
+    listener.start()
+
+    last_marker, last_heartbeat  = (-1, -1), 0.0
 
     try:
         with Live(build_full_layout(threshold), console=console,
                   refresh_per_second=1, screen=False) as live:
-            while True:
+            while not _quit_now.is_set():
                 time.sleep(0.5)
+                if _paused.is_set():
+                    continue
                 marker = get_change_marker()
-                now = time.time()
+                now    = time.time()
                 
                 # redraw if data changed, OR every 5s anyway (clock/stsus heartbeat)
                 if marker != last_marker or (now - last_heartbeat) >= 5:
                     live.update(build_full_layout(threshold))
-                    last_marker     = marker
-                    last_heartbeat  = now
+                    last_marker, last_heartbeat = marker, now
     except KeyboardInterrupt:
+        _quit_now.set()
         console.print("\n[dim]Dashboard stopped[/dim]")
 
 
