@@ -9,7 +9,7 @@ SCHEMA = """
 CREATE TABLE orders(orderID INTEGER PRIMARY KEY, userID TEXT, price REAL,
     quantity INTEGER, side TEXT, timestamp INTEGER, status TEXT DEFAULT 'PENDING',
     blockScore REAL DEFAULT 0.0, fraudFlag INTEGER DEFAULT 0);
-CREATE TABLE trades(tradeID INTEGER PRIMARY KEY AUTOINCERMENT, buyOrderID INTEGER,
+CREATE TABLE trades(tradeID INTEGER PRIMARY KEY AUTOINCREMENT, buyOrderID INTEGER,
     sellOrderID INTEGER, price REAL, quantity INTEGER, timestamp INTEGER);
 CREATE TABLE risk_log(logID INTEGER PRIMARY KEY AUTOINCREMENT, userID TEXT,
     orderID INTEGER, fraudScore REAL, reason TEXT, action TEXT, timestamp INTEGER);
@@ -23,7 +23,7 @@ def temp_db(tmp_path, monkeypatch):
     conn.execute("INSERT INTO orders VALUES (1, 'I1', 100.0, 10, 'BUY', 1700000000, 'FILLED', 0.1, 0)")
     conn.execute("INSERT INTO orders VALUES (2, 'I2', 100.0, 10, 'SELL', 1700000000, 'FILLED', 0.1, 0)")
     conn.execute("INSERT INTO trades VALUES (1, 1, 2, 100.0, 10, 1700000000)")
-    conn.execute("INSERT INTO risk_log VALUES (1, 'I1', 1, 0.9, 'circular trading ring detected', 'WARN', 1700000000, 'FILLED', 0.1, 0)")
+    conn.execute("INSERT INTO risk_log VALUES (1, 'I1', 1, 0.9, 'circular trading ring detected', 'WARN', 1700000000)")
     conn.commit(); conn.close()
 
     # monkeypatch we're using 'cuz the module-level DB_PATH constant so _connect() uses our temp file

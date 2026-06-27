@@ -33,7 +33,7 @@ def build_stats_panel() -> Panel:
     t.add_column(style="bold white", justify="right")
 
     t.add_row(" 📋  Total Orders",    str(stats.get("total_orders", 0)))
-    t.add_row(" ⚡  Trades Executed", str(stats.get("total_orders", stats.get("total_orders", 0))))
+    t.add_row(" ⚡  Trades Executed", str(stats.get("total_trades", 0)))
     t.add_row(" 🚫  Orders Blocked",   str(stats.get("blocked", 0)))
     t.add_row(" 📊  Fraud Rate",
                f"[red]{stats['fraud_rate']}%[/red]" \
@@ -148,8 +148,8 @@ def build_graph_panel() -> Panel:
     data = get_graph_data()
     lines = []
     for buyer, seller in data["edges"]:
-        in_ring = (buyer in data["ring_member"] and 
-                   seller in data["ring_member"])
+        in_ring = (buyer in data["ring_members"] and 
+                   seller in data["ring_members"])
         maker = "   [red] ⚠ CYCLE[/red]" if in_ring else ""
         lines.append(f"{buyer} [dim]->[/dim] {seller}{maker}")
 
@@ -158,7 +158,7 @@ def build_graph_panel() -> Panel:
 
     nodes = len({u for e in data["edges"] for u in e})
     footer = (f"\n[dim]{nodes} nodes • {len(data['edges'])} edges • "
-              f"{len(data['ring_member'])} ring member[/dim]")
+              f"{len(data['ring_members'])} ring member[/dim]")
     
     body = "\n".join(lines) + footer
     return Panel(body, title="[bold magenta] Trading Network[/bold magenta]",
