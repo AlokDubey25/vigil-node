@@ -98,7 +98,7 @@ def get_graph_data() -> Dict[str, Any]:
     """Graph panel - recent trade edges + which users are in a ring."""
     conn = _connect()
     if not conn:
-        return {"edges": [], "ring_members": set()}
+        return {"edges": [], "ring_members": []}
     
     try:
         # same JOIN pattern as getTradePairs() in Cpp - last 10 trades only
@@ -118,7 +118,7 @@ def get_graph_data() -> Dict[str, Any]:
         ).fetchall()
         ring_members = {r[0] for r in ring_rows}
 
-        return {"edges": edges, "ring_member": ring_members}
+        return {"edges": edges, "ring_members": ring_members}
     finally:
         conn.close()
 
