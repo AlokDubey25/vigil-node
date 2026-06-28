@@ -88,3 +88,79 @@ tests/cpp/     ← Catch2 unit tests
 python/utils/  ← config + logging helpers
 docs/          ← this file + schema.md + bridge_contract.md
 ```
+
+## components built (Phases 3–8)
+
+### FeatureExtractor  (cpp/src/feature_extractor.cpp)
+
+- rolling 100-order window per user via unordered_map<string deque<Order>> 
+- 6 behavioral features: velocity, priceDeviation, cancelRate,
+  sizeRatio, timeBetween, repeatPriceRate
+- toJSON() for the Python bridge, isSuspicious() rule-based pre-check
+- all features capped to prevent ML outlier distortion
+
+### Python ML ensemble  (python/models/, python/bridge/scorer.py)
+
+- XGBoost + Random Forest, both handling class imbalance independently
+- ensemble_score() averages both models' fraud probability
+- scorer.py: stdin/stdout loop, validates input, never crashes the pipe
+
+### Bridge  (cpp/src/bridge.cpp)
+
+- fork + pipe + dup2 + execl — bidirectional C++↔Python communication
+- handshake protocol (Python sends {"ready":true} before scoring starts)
+- fallback score (0.5) if Python is unavailable — engine never crashes
+
+### Config  (cpp/src/config.cpp)
+
+- pimpl pattern — nlohmann/json.hpp isolated to one .cpp file
+- every threshold, weight, and limit is in config/settings.json
+- no recompilation needed to retune the system
+
+### Graph  (cpp/src/graph.cpp)
+
+- directed adjacency list — buyer → seller edges per trade
+- DFS cycle detection (depth ≤ 3) catches wash trading
+- BFS connected components find entire fraud rings, not just pairs
+- getNetworkScore() feeds into the final combined verdict
+
+### Dashboard  (python/dashboard/)
+
+- db_reader.py: read-only SQLite access, safe alongside the writing engine (WAL mode)
+- dashboard.py: Rich-based 4-panel live terminal UI
+- header bar shows engine online/offline status + current threshold
+- event-driven refresh — redraws only when data changes, not on a blind timer
+
+---
+
+## final data flow (Phases 1–8 combined)
+
+``` architecture
+order arrives
+  → saveOrder(PENDING)                      
+  → blacklist check (O(1) unordered_set)    
+  → extract 6 features                       
+  → ML score (XGBoost + RF ensemble)         
+  → graph network score (cycle + degree)     
+  → combined = ml*0.7 + graph*0.3            
+  → verdict vs config threshold              
+       REJECTED → risk_log + escalation
+       ALLOWED  → order book → match engine  
+                → trade saved → graph edge added
+  → dashboard reads live from SQLite         
+```
+
+---
+
+## status — all phases complete
+
+| phase | component           | status |
+|-------|---------------------|--------|
+| 1     | Order book          | ✓ done |
+| 2     | SQLite persistence  | ✓ done |
+| 3     | Feature extractor   | ✓ done |
+| 4     | ML ensemble         | ✓ done |
+| 5     | C++↔Python bridge   | ✓ done |
+| 6     | Blacklist + verdict | ✓ done |
+| 7     | Graph logic         | ✓ done |
+| 8     | CLI dashboard       | ✓ done |
