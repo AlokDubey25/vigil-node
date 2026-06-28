@@ -93,7 +93,8 @@ docs/          ← this file + schema.md + bridge_contract.md
 
 ### FeatureExtractor  (cpp/src/feature_extractor.cpp)
 
-- rolling 100-order window per user via unordered_map<string deque<Order>> 
+- rolling 100-order window per user via unordered_map<stringdeque<Order>>
+
 - 6 behavioral features: velocity, priceDeviation, cancelRate,
   sizeRatio, timeBetween, repeatPriceRate
 - toJSON() for the Python bridge, isSuspicious() rule-based pre-check
