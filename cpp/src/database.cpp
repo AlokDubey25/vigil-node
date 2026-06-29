@@ -349,8 +349,8 @@ bool DatabaseHandler::deposit(const string& userID, double amount,
     if (!db_ || amount <= 0) return false;
     
     const char* sql = 
-    "INSERT INTO accounts (userID, balance) VALUES (?, ?) "
-    "ON CONFLICT(userID) DO UPDATE SET balance = balance + ?";
+        "INSERT INTO accounts (userID, balance) VALUES (?, ?) "
+        "ON CONFLICT(userID) DO UPDATE SET balance = balance + ?";
 
     sqlite3_stmt* stmt = nullptr;
     if (sqlite3_prepare_v2(db_, sql, -1, &stmt, nullptr) != SQLITE_OK) return false;
@@ -396,3 +396,82 @@ bool DatabaseHandler::withdraw(const string& userID, double amount,
     return true;
 }
 
+bool DatabaseHandler::settleTrade(const string& buyerID, const string& sellerID, double amount) {
+    if (!db_) return false;
+    if (amount <= 0) return true;
+
+    execSQL("BEGIN TRANSACTION");
+
+    bool buyerOK  = withdraw(buyerID, amount, "TRADE_BUY", "paid " + sellerID);
+    bool sellerOK = buyerOK && deposit(sellerID, amount, "TRADE_SELL", "recieved from " + buyerID);
+
+    if (buyerOK && sellerOK) {
+        execSQL("COMMIT;");
+        return true;
+    }
+
+    execSQL("ROOLBACK;");
+    cerr<< "[DB] settleTrade failed - rolled back\n";
+    return false;
+}
+
+vector<TransactionRecord> DatabaseHandler::getRecentTransactions(int limit) {
+    vector<TransactionRecord> records;
+    if (!db_)  return records;
+    const char* sql =
+        "SELECT txnID, userID, type amount, balanceAfter, timestamp, note "
+        "FROM transactions ORDER BY txnID DESC LIMIT ?";
+
+    sqlite3_stmt* stmt = nullptr;
+
+    if (sqlite3_prepare_v2(db_, sql, -1, &stmt, nullptr) != SQLITE_OK) return records;
+
+    sqlite3_bind_int(stmt, 1, limit);
+
+    while (sqlite3_step(stmt) == SQLITE_ROW) {
+        TransactionRecord r;
+        r.txnID        = sqlite3_column_int(stmt, 0);
+        r.userID       = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 1));
+        r.type         = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 2));
+        r.amount       = sqlite3_column_double(stmt, 3);
+        r.balanceAfter = sqlite3_column_double(stmt, 4);
+        r.timestamp    = sqlite3_column_int64(stmt, 5);
+        const unsigned char* noteRaw = sqlite3_column_text(stmt, 6);
+        r.note         = noteRaw ? reinterpret_cast<const char*>(noteRaw) : "";
+        records.push_back(r);
+    }
+
+    sqlite3_finalize(stmt);
+    return records;
+}
+
+vector<TransactionRecord> DatabaseHandler::getRecentTransactions(const string& userID, int limit) {
+    vector<TransactionRecord> records;
+    if (!db_) return records;
+    const char* sql =
+        "SELECT tnxID, userID, type, amount, balanceAfter, timestamp, note "
+        "FROM transactions WHERE userID = ? ORDER BY tnxID DESC LIMIT ?";
+    
+        sqlite3_stmt* stmt = nullptr;
+
+    if (sqlite3_prepare_v2(db_, sql, -1, &stmt, nullptr) != SQLITE_OK) return records;
+    
+    sqlite3_bind_text(stmt, 1, userID.c_str(), -1, SQLITE_TRANSIENT);
+    sqlite3_bind_int (stmt, 2, limit);
+
+    while (sqlite3_step(stmt) == SQLITE_ROW) {
+        TransactionRecord r;
+        r.txnID        = sqlite3_column_int(stmt, 0);
+        r.userID       = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 1));
+        r.type         = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 2));
+        r.amount       = sqlite3_column_double(stmt, 3);
+        r.balanceAfter = sqlite3_column_double(stmt, 4);
+        r.timestamp    = sqlite3_column_int64(stmt, 5);
+        const unsigned char* noteRaw = sqlite3_column_text(stmt, 6);
+        r.note         = noteRaw ? reinterpret_cast<const char*>(noteRaw) : "";
+        records.push_back(r);
+    }
+    sqlite3_finalize(stmt);
+    
+    return records;
+}
