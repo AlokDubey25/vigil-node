@@ -346,20 +346,53 @@ bool DatabaseHandler::logTransaction(const string& userID, const string& type,
 bool DatabaseHandler::deposit(const string& userID, double amount,
                               const string& type, const string& note) {
     
-    string sql = "UPDATE accounts SET balance = balance + " + to_string(amount) + 
-                 " WHERE userID = '" + userID + "';";
-    execSQL(sql); 
-    return true; 
+    if (!db_ || amount <= 0) return false;
+    
+    const char* sql = 
+    "INSERT INTO accounts (userID, balance) VALUES (?, ?) "
+    "ON CONFLICT(userID) DO UPDATE SET balance = balance + ?";
+
+    sqlite3_stmt* stmt = nullptr;
+    if (sqlite3_prepare_v2(db_, sql, -1, &stmt, nullptr) != SQLITE_OK) return false;
+
+    sqlite3_bind_text  (stmt, 1, userID.c_str(), -1, SQLITE_TRANSIENT);
+    sqlite3_bind_double(stmt, 2, amount);
+    sqlite3_bind_double(stmt, 3, amount);
+
+    int rc = sqlite3_step(stmt);
+    sqlite3_finalize(stmt);
+
+    if (rc != SQLITE_DONE) return false;
+
+    logTransaction(userID, type, amount, getBalance(userID), note);   
+
+    return true;
 }
+
 
 bool DatabaseHandler::withdraw(const string& userID, double amount,
                                const string& type, const string& note) {
-    double current = getBalance(userID); 
-    if (current < amount) {
-        return false;
-    string sql = "UPDATE accounts SET balance = balance - " + to_string(amount) + 
-                 " WHERE userID = '" + userID + "';";
-    execSQL(sql);
+    
+    if (!db_ || amount <= 0) return false;
 
-   return true;
+    double current = getBalance(userID);
+    if (current < amount) return false;  
+
+    const char* sql = "UPDATE accounts SET balance = balance - ? WHERE userID = ?";
+    
+    sqlite3_stmt* stmt = nullptr;
+    
+    if (sqlite3_prepare_v2(db_, sql, -1, &stmt, nullptr) != SQLITE_OK) return false;
+    sqlite3_bind_double(stmt, 1, amount);
+    sqlite3_bind_text  (stmt, 2, userID.c_str(), -1, SQLITE_TRANSIENT);
+
+    int rc = sqlite3_step(stmt);
+    sqlite3_finalize(stmt);
+    
+    if (rc != SQLITE_DONE) return false;
+
+    logTransaction(userID, type, amount, getBalance(userID), note);   ← new
+    
+    return true;
 }
+
