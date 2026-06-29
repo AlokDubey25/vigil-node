@@ -1,6 +1,7 @@
 // Mainly this file is to implement constructor and create tables
 # include "../include/database.h"
 # include <iostream>
+# include <ctime>
 using namespace std;
 
 DatabaseHandler::DatabaseHandler(const string& dbPath){
@@ -73,6 +74,15 @@ bool DatabaseHandler::createTables(){
             action      TEXT    NOT NULL,
             timestamp   INTEGER NOT NULL,
             FOREIGN KEY (orderID) REFERENCES orders(orderID)               -- theres s in orders which i missed
+        );
+        CREATE TABLE IF NOT EXISTS transactions (
+            txnID         INTEGER PRIMARY KEY AUTOINCREMENT,
+            userID        TEXT NOT NULL,
+            type          TEXT NOT NULL,
+            amount        REAL NOT NULL,
+            balanceAfter  REAL NOT NULL,
+            timestamp     INTEGER NOT NULL,
+            note          TEXT
         );
     )SQL";  
 
@@ -308,4 +318,48 @@ vector<pair <string, string >> DatabaseHandler::getTradePairs() {
         << " historical trade pairs for graph\n";
 
     return pairs;
+}
+
+bool DatabaseHandler::logTransaction(const string& userID, const string& type, 
+                                     double amount, double balanceAfter, double string& note) {
+
+    if (!db_) return false;
+    const char* sql = 
+        "INSERT INTO transactions (userID, type, amount, balanceAfter, timestamp, note)" 
+        "VALUES (?, ?, ?, ?, ?, ?)";
+    
+    sqlite3_stmt* stmt = nullptr;
+    if (sqlite3_prepare_v2(db_, sql, -1, &stmt, nullptr) != SQLITE_OK) return false;
+
+    sqlite3_bind_text  (stmt, 1, userID.c_str(), -1, SQLITE_TRANSIENT);
+    sqlite3_bind_text  (stmt, 2, type.c_str(),   -1, SQLITE_TRANSIENT);
+    sqlite3_bind_double(stmt, 3, amount);
+    sqlite3_bind_double(stmt, 4, balanceAfter);
+    sqlite3_bind_int64 (stmt, 5, static_cast<long long>(time(nullptr)));
+    sqlite3_bind_text  (stmt, 6, note.c_str(),   -1, SQLITE_TRANSIENT);
+
+    int rc = sqlite3_step(stmt);
+    sqlite3_finalize(stmt);
+    return rc == SQLITE_DONE;
+}
+
+bool DatabaseHandler::deposit(const string& userID, double amount,
+                              const string& type, const string& note) {
+    
+    string sql = "UPDATE accounts SET balance = balance + " + to_string(amount) + 
+                 " WHERE userID = '" + userID + "';";
+    execSQL(sql); 
+    return true; 
+}
+
+bool DatabaseHandler::withdraw(const string& userID, double amount,
+                               const string& type, const string& note) {
+    double current = getBalance(userID); 
+    if (current < amount) {
+        return false;
+    string sql = "UPDATE accounts SET balance = balance - " + to_string(amount) + 
+                 " WHERE userID = '" + userID + "';";
+    execSQL(sql);
+
+   return true;
 }
