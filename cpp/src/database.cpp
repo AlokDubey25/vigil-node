@@ -445,7 +445,7 @@ vector<TransactionRecord> DatabaseHandler::getRecentTransactions(int limit) {
     return records;
 }
 
-vector<TransactionRecord> DatabaseHandler::getRecentTransactions(const string& userID, int limit) {
+vector<TransactionRecord> DatabaseHandler::getTransactionsForUser(const string& userID, int limit) {
     vector<TransactionRecord> records;
     if (!db_) return records;
     const char* sql =
@@ -472,6 +472,6 @@ vector<TransactionRecord> DatabaseHandler::getRecentTransactions(const string& u
         records.push_back(r);
     }
     sqlite3_finalize(stmt);
-    
+
     return records;
 }
