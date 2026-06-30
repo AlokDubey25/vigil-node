@@ -62,3 +62,19 @@ Read by: database.cpp loadBlacklist()
 | WARN            | flagged once, still allowed to trade   |
 | TEMP_BLOCK      | blocked for this session only          |
 | PERMANENT_BLOCK | blocked forever, loaded on every start |
+
+## transactions
+
+Every deposit, withdrawal, and trade settlement, as its own row.
+Written by: deposit(), withdraw(), settleTrade() — automatically,
+callers never write here directly.
+
+| column       | type    | notes                                  |
+|--------------|---------|----------------------------------------|
+| txnID        | INTEGER | auto-increment                         |
+| userID       | TEXT    | whose account changed                  |
+| type         | TEXT    | DEPOSIT/WITHDRAW/TRADE_BUY/TRADE_SELL  |
+| amount       | REAL    | always positive — type tells direction |
+| balanceAfter | REAL    | balance immediately after this change  |
+| timestamp    | INTEGER | unix epoch seconds                     |
+| note         | TEXT    | optional context, can be NULL          |

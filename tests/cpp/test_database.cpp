@@ -213,4 +213,69 @@ TEST_CASE("getTradesPairs returns buyer-seller user IDs") {
         REQUIRE(pairs[0].second == "I2001");    // SELLER
     }
 }
-// error in passing test still
+
+TEST_CASE("deposit logs a transaction") {
+    DatabaseHandler db(MEM_DB);
+    REQUIRE(db.isOpen());
+    REQUIRE(db.deposit("U1", 1000.0) == true);
+
+    auto records = db.getTransactionsForUser("U1", 10);
+    REQUIRE(records.size() == 1);
+    REQUIRE(records[0].type == "DEPOSIT");
+    REQUIRE(records[0].amount == Approx(1000.0));
+    REQUIRE(records[0].balanceAfter == Approx(1000.0));
+}
+
+TEST_CASE("failed withdraw does not get logged") {
+    DatabaseHandler db(MEM_DB);
+    REQUIRE(db.isOpen());
+    db.deposit("U1", 1000.0);
+
+    SECTION("successful withdraw is logged") {
+        db.withdraw("U1", 300.0);
+        auto records = db.getTransactionsForUser("U1", 10);
+        REQUIRE(records.size() == 2);              // deposit + withdraw
+        REQUIRE(records[0].type == "WITHDRAW");   // most recent first
+    }
+    SECTION("insufficient-funds withdraw is not logged") {
+        db.withdraw("U1", 99999.0);
+        auto records = db.getTransactionsForUser("U1", 10);
+        REQUIRE(records.size() == 1);          // only the original deposit
+    }
+}
+
+TEST_CASE("settleTrade logs TRADE_BUY for buyer, TRADE_SELL for seller") {
+    DatabaseHandler db(MEM_DB);
+    REQUIRE(db.isOpen());
+    db.deposit("BUYER", 1000.0);
+
+    REQUIRE(db.settleTrade("BUYER", "SELLER", 300.0) == true);
+
+    auto buyerRecords  = db.getTransactionsForUser("BUYER", 10);
+    auto sellerRecords = db.getTransactionsForUser("SELLER", 10);
+
+    REQUIRE(buyerRecords[0].type == "TRADE_BUY");
+    REQUIRE(sellerRecords[0].type == "TRADE_SELL");
+}
+
+TEST_CASE("a failed settleTrade leaves no transaction log entries") {
+    DatabaseHandler db(MEM_DB);
+    REQUIRE(db.isOpen());
+    db.deposit("BUYER", 50.0);
+
+    REQUIRE(db.settleTrade("BUYER", "SELLER", 300.0) == false);
+
+    auto buyerRecords = db.getTransactionsForUser("BUYER", 10);
+    REQUIRE(buyerRecords.size() == 1);       // still just the original deposit
+}
+
+TEST_CASE("getRecentTransactions spans all users, newest first") {
+    DatabaseHandler db(MEM_DB);
+    REQUIRE(db.isOpen());
+    db.deposit("U1", 100.0);
+    db.deposit("U2", 200.0);
+
+    auto records = db.getRecentTransactions(10);
+    REQUIRE(records.size() == 2);
+    REQUIRE(records[0].userID == "U2");   // most recent first
+}
