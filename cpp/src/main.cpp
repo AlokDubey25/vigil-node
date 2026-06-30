@@ -12,10 +12,32 @@
 # include "../include/graph.h"
 using namespace std;
 
+int runHistory(int argc, char* agrv[]);
+void runInterctive(DatabaseHandler& db);
+
+void printUsage() {
+    cout<< "Usage: ./build/vigil <command> [args]\n"
+        << "Commands:\n"
+        << "    history         show the last 10 transactions for a user\n";
+}
 
 
+int main(int argc, char* argv[]){
 
-int main(){
+    if (argc > 1) {
+        string command = argv[1];
+        if (command == "history") { 
+            return runHistory(argc, argv);
+        } else if (command == "interactive"){
+            DatabaseHandler db("vigil.db");
+            if (!db.isOpen()) return 1;
+            runInterctive(db);
+            return 0;
+        } else {
+            printUsage();
+            return 1;
+        }
+    }
 
     // 01 :- config: reads settings.json before anything else
     Config cfg("config/settings.json");
@@ -259,4 +281,69 @@ int main(){
     }
 
     return 0;
+}
+
+int runHistory(int argc, char* argv[]) {
+    if (argc < 3) {
+        cerr<< Color::red("[ERROR] usage: ./build/vigil history ") << "\n";
+        return 1;
+    }
+    string userID = argv[2];
+    DatabaseHandler db("vigil.db");
+    if (!db.isOpen()) return 1;
+
+    auto records = db.getTransactionsForUser(userID, 10);
+    if (records.empty()) {
+        cout<< Color::dim("no transactions for " + userID) << "\n";
+        return 0;
+    }
+
+    cout<< Color::bold("\033[1m==== Transaction History: " + userID + " ====\033[0m") << "\n";
+    for (const auto& r : records) {
+        bool isOutFlow = (r.type == "WITHDRAW" || r.type == "TRADE_BUY");
+
+        string sign = isOutFlow ? "-" : "+";
+        string colored = isOutFlow ? Color::red(sign + "Rd. ") : Color::green(sign + "Rs. ");
+
+        cout<< " " << r.type << " " << colored
+            << fixed << setprecision(2) << r.amount
+            << "  -> balance Rs." << r.balanceAfter;
+        
+        if (!r.note.empty()) cout << "  (" << r.note << ")";
+        cout << "\n";
+    }
+    return 0;
+}
+
+void runInteractive(DatabaseHandler& db) {
+    cout<< "\033[36==== Live Session Started. Type commands below (e.g. 'history I2001' or 'exit') ====\033[0m\n";
+
+    while (cout<< "vigil> " && getline(cin, line)) {
+        if (line == "exit" || line == "quit") {
+            break;
+        }
+
+        if (line.rfind("history ", 0) == 0) {
+            string uid = line.substr(8);
+            auto records = db.getTransactionsForUser(uid, 10);
+
+            if (records.empty()) {
+                cout<< "\033[90mno transactions for " << uid << "\033[0m\n";
+            } else {
+                for (const auto& r : records) {
+                    bool isOutFlow = (r.type == "WINDOW" || r.type == "TRADE_BUY")
+                    string sign = isOutFlow ? "-" : "+";
+                    string colored = isOutFlow ? ("\033[31m" + sign + "Rs.") : ("\033[32m" + sign + "Rs.");
+                    
+                    cout<< "  " << r.type << "  " << colored 
+                        << fixed << setprecision(2) << r.amount << "\033[0m"
+                        << "  -> Rs." << r.balanceAfter << "\n";
+                }
+            }
+            continue;
+        }
+        if (!line.empty()) {
+            cout<< "    Unkown command. Supported commands: history <userID>\n";
+        }
+    }
 }
