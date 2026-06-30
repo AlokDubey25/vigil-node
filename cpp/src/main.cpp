@@ -18,7 +18,8 @@ void runInterctive(DatabaseHandler& db);
 void printUsage() {
     cout<< "Usage: ./build/vigil <command> [args]\n"
         << "Commands:\n"
-        << "    history         show the last 10 transactions for a user\n";
+        << "    history         show the last 10 transactions for a user\n"
+        << ;
 }
 
 
