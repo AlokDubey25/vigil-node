@@ -58,8 +58,7 @@ def build_orders_panel() -> Panel:
     t.add_column("Status",width=10)
 
     for o in orders:
-        side_s = f"[green]{o['side']}[/]" \
-                 if o["side"] == "BUY" else f"[red]{o['side']}[/]"
+        side_s = f"[green]{o['side']}[/]" if o["side"] == "BUY" else f"[red]{o['side']}[/]"
         status_s = {
             "FILLED":   "[green]FILLED[/]",
             "REJECTED": "[red]BLOCKED[/]",
@@ -69,7 +68,7 @@ def build_orders_panel() -> Panel:
                   f"{o['price']:.2f}", str(o["quantity"]),
                   side_s, status_s)
         
-        return Panel(t, title="[bold blue] 🛒 Recent Orders [/bold blue]",
+    return Panel(t, title="[bold blue] 🛒 Recent Orders [/bold blue]",
                      border_style="blue", expand=True)
     
 # PANEL - 03 : RISK LOG
@@ -87,12 +86,14 @@ def build_risk_panel() -> Panel:
             "PERMANENT_BLOCK": "[bold red]PERMANENT_BLOCK[/]",
             "TEMP_BLOCK":      "[bold orange]TEMP_BLOCK[/]",
             "WARN":            "[yellow]WARN[/]",
+            "REJECT":          "[red]REJECT[/]",
+            "REJECT_FUNDS":    "[red]INSUFFICIENT FUNDS[/]",
         }.get(e["action"], e["action"])
         t.add_row(e["userID"], 
                   f"{e['fraudScore']:.3f}",
                   action_s, e["reason"][:24])
         
-        return Panel(t, title="[bold red] ⚠️ RISK Log [/bold red]",
+    return Panel(t, title="[bold red] ⚠️ RISK Log [/bold red]",
                      border_style="red", expand=True)
     
 # PANEL - 04 : ORDER BOOK SNAPSHOT 
