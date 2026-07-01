@@ -58,7 +58,7 @@ int main(int argc, char* argv[]){
 
     string cmd = argv[1];
     if (cmd == "history")     return runHistory(argc, argv);
-    if (cmd == "reset")       return runReset();       ← fix 6: now handled
+    if (cmd == "reset")       return runReset();      
     if (cmd == "--help")      { printUsage(); return 0; }
     if (cmd != "run" && cmd != "interactive") {
         cerr<< Color::red("[ERROR] unknown command: " + cmd) << "\n";
@@ -143,8 +143,7 @@ int main(int argc, char* argv[]){
     runMatchLoop(book, db, tradeGraph, orderUsers);
 
     // ── wash trading demo — prices far from the normal range so wash
-    // traders match EACH OTHER, not the existing cheaper sells      ──
-    // fix 12: was 105/104.50 — collided with existing book prices    
+    // traders match EACH OTHER, not the existing cheaper sells      ──    
     cout << "\n==== wash trading demo ====\n";
     insert(makeOrder(20, "I2001", 200.00,  5, "BUY"));
     insert(makeOrder(21, "I2002", 190.00,  5, "SELL"));
@@ -329,36 +328,108 @@ int runHistory(int argc, char* argv[]) {
     }
     return 0;
 }
-~~
-void runInteractive(DatabaseHandler& db) {
-    cout<< "\033[36==== Live Session Started. Type commands below (e.g. 'history I2001' or 'exit') ====\033[0m\n";
 
-    while (cout<< "vigil> " && getline(cin, line)) {
-        if (line == "exit" || line == "quit") {
-            break;
+
+void runInteractive(DatabaseHandler& db, Bridge& bridge,
+                     OrderBook& book, FeatureExtractor& extractor,
+                     Graph& tradeGraph,
+                     unordered_set<string>& blocked,
+                     unordered_map<int, string>& orderUsers,
+                     double THRESHOLD, double ML_WEIGHT,
+                     double GRAPH_WEIGHT, int TEMP_AT, int PERM_AT)
+{
+    cout << Color::cyan("=== Vigil Node — Interactive Mode ===") << "\n";
+
+    cout << "Enter your name to begin: ";
+    string currentUser;
+    getline(cin, currentUser);
+    if (currentUser.empty()) currentUser = "GUEST";
+
+    auto promptDouble = [](const string& label) -> double {
+        cout << label;
+        string line; getline(cin, line);
+        try { return stod(line); } catch (...) { return -1.0; }
+    };
+    auto promptInt = [](const string& label) -> int {
+        cout << label;
+        string line; getline(cin, line);
+        try { return stoi(line); } catch (...) { return -1; }
+    };
+
+    int nextID = 1000;
+
+    while (true) {
+        cout << "\n" << Color::bold("=== " + currentUser
+                             + "  |  Rs."
+                             + to_string(db.getBalance(currentUser)) + " ===") << "\n";
+        cout << "1.Buy  2.Sell  3.Deposit  4.Withdraw  "
+                "5.Balance  6.History  7.Book  8.Cancel  9.Switch  0.Quit\n> ";
+
+        string choice;                  
+        if (!getline(cin, choice)) break;
+        if (choice == "0" || choice == "quit" || choice == "exit") break;
+
+        if (choice == "1" || choice == "2") {
+            string side = (choice == "1") ? "BUY" : "SELL";
+            double price = promptDouble("  Price? Rs.");
+            int    qty   = promptInt("  Quantity? ");
+            if (price <= 0 || qty <= 0) {
+                cout << Color::red("  invalid price or quantity") << "\n";
+            } else {
+                Order o = makeOrder(nextID++, currentUser, price, qty, side);
+                processOrder(o, db, book, extractor, bridge, tradeGraph,
+                             blocked, orderUsers, THRESHOLD,
+                             ML_WEIGHT, GRAPH_WEIGHT, TEMP_AT, PERM_AT);
+                runMatchLoop(book, db, tradeGraph, orderUsers);
+            }
+            continue;
         }
-
-        if (line.rfind("history ", 0) == 0) {
-            string uid = line.substr(8);
-            auto records = db.getTransactionsForUser(uid, 10);
-
+        if (choice == "3") {
+            double amt = promptDouble("  Deposit amount? Rs.");
+            if (amt <= 0 || !db.deposit(currentUser, amt))
+                cout << Color::red("  deposit failed\n");
+            else
+                cout << Color::green("  deposited — new balance Rs."
+                               + to_string(db.getBalance(currentUser))) << "\n";
+            continue;
+        }
+        if (choice == "4") {
+            double amt = promptDouble("  Withdraw amount? Rs.");
+            if (amt <= 0 || !db.withdraw(currentUser, amt))
+                cout << Color::red("  insufficient funds\n");
+            else
+                cout << Color::green("  withdrawn — balance Rs."
+                               + to_string(db.getBalance(currentUser))) << "\n";
+            continue;
+        }
+        if (choice == "5") {
+            cout << "  balance: Rs." << fixed << setprecision(2)
+                 << db.getBalance(currentUser) << "\n";
+            continue;
+        }
+        if (choice == "6") {
+            auto records = db.getTransactionsForUser(currentUser, 10);
             if (records.empty()) {
-                cout<< "\033[90mno transactions for " << uid << "\033[0m\n";
+                cout << Color::dim("  no transactions yet\n");
             } else {
                 for (const auto& r : records) {
-                    bool isOutFlow = (r.type == "WINDOW" || r.type == "TRADE_BUY")
-                    string sign = isOutFlow ? "-" : "+";
-                    string colored = isOutFlow ? ("\033[31m" + sign + "Rs.") : ("\033[32m" + sign + "Rs.");
-                    
-                    cout<< "  " << r.type << "  " << colored 
-                        << fixed << setprecision(2) << r.amount << "\033[0m"
-                        << "  -> Rs." << r.balanceAfter << "\n";
+                    bool out = (r.type == "WITHDRAW" || r.type == "TRADE_BUY"); 
+                    string sign = out ? "-" : "+";
+                    cout << "  " << r.type << "  " << sign << "Rs."
+                         << fixed << setprecision(2) << r.amount
+                         << "  -> Rs." << r.balanceAfter << "\n";
                 }
             }
             continue;
         }
-        if (!line.empty()) {
-            cout<< "    Unkown command. Supported commands: history <userID>\n";
+        if (choice == "7") { book.printBook(); continue; }
+        if (choice == "9") {
+            cout << "  Enter new name: ";
+            getline(cin, currentUser);
+            if (currentUser.empty()) currentUser = "GUEST";
+            continue;
         }
+        cout << Color::red("  unknown option — pick a number from the menu\n");
     }
+    cout << Color::dim("\nsession ended\n");
 }
