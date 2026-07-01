@@ -125,9 +125,58 @@ int main(int argc, char* argv[]){
     }
 
 
-    auto makeOrder = [](int id, const string& user,
-                        double price, int qty,
-                        const string& side){
+     auto insert = [&](const Order& o) {
+        processOrder(o, db, book, extractor, bridge, tradeGraph,
+                     blocked, orderUsers, THRESHOLD,
+                     ML_WEIGHT, GRAPH_WEIGHT, TEMP_AT, PERM_AT);
+    };
+
+    cout << "\n===== processing orders =====\n";
+    insert(makeOrder(1, "I1001", 104.00, 10, "BUY"));
+    insert(makeOrder(2, "I1002", 103.50,  5, "BUY"));
+    insert(makeOrder(3, "I1003", 101.00, 20, "BUY"));
+    insert(makeOrder(4, "I1004", 103.00,  8, "SELL"));
+    insert(makeOrder(5, "I1005", 103.25,  5, "SELL"));
+    insert(makeOrder(6, "I1006", 106.00, 10, "SELL"));
+
+    cout << "\n==== matching normal orders ====\n";
+    runMatchLoop(book, db, tradeGraph, orderUsers);
+
+    // ── wash trading demo — prices far from the normal range so wash
+    // traders match EACH OTHER, not the existing cheaper sells      ──
+    // fix 12: was 105/104.50 — collided with existing book prices    
+    cout << "\n==== wash trading demo ====\n";
+    insert(makeOrder(20, "I2001", 200.00,  5, "BUY"));
+    insert(makeOrder(21, "I2002", 190.00,  5, "SELL"));
+    runMatchLoop(book, db, tradeGraph, orderUsers);   ← I2001 buys from I2002
+
+    insert(makeOrder(22, "I2002", 200.00,  5, "BUY"));
+    insert(makeOrder(23, "I2001", 190.00,  5, "SELL"));
+    runMatchLoop(book, db, tradeGraph, orderUsers);   ← I2002 buys from I2001 → cycle!
+
+    cout << "\n[GRAPH] " << tradeGraph.getSummary() << "\n";
+    tradeGraph.print();
+    auto circular = tradeGraph.getCircularTraders();
+    if (!circular.empty())
+        cout << Color::red("[GRAPH] " + to_string(circular.size())
+                         + " users flagged for circular trading") << "\n";
+    return 0;
+}
+
+
+int runReset() {                                  
+    const char* files[] = { "vigil.db", "vigil.db-wal", "vigil.db-shm" };
+    for (const char* f : files) {
+        if (std::remove(f) == 0)
+            cout << Color::green("[RESET] removed " + string(f)) << "\n";
+    }
+    cout << "done — run './build/vigil run' to start fresh.\n";
+    return 0;
+}
+
+
+Order makeOrder(int id, const string& user,
+                double price, int qty,const string& side){
         
         Order o;
         o.orderID = id;
@@ -137,118 +186,78 @@ int main(int argc, char* argv[]){
         o.side = side;
         o.timestamp = static_cast<long long>(time(nullptr));
         return o;
-    };
+}
 
 
-    // 04 :- it will hepl to detemine escalation action like
-    // prevFlags = how many times already flagged (from risk_log)
-    // thisFlag  = prevFlags + 1 (current incident)
-    auto escalate = [&](const string& userID) -> string {
-        int prevFlags = db.getUserFlagCount(userID);
-        int thisFlag  = prevFlags + 1;
-
-        if (thisFlag < TEMP_AT) return "WARN";
-        if (thisFlag < PERM_AT) return "TEMP_BLOCK";
-        
-        return "PERMANENT_BLOCK";
-    };
-
-
-    // 05 :- inset orders
-    // now every insert will save to main db , extract features, adds to book
-    auto insertOrder = [&](const Order& o){
-        // a. Save to DB first
-        if (!db.saveOrder(o))
-            cerr<< "[WARN] order " << o.orderID << " not saved to DB\n";
-
-        // this to remeber who owns this order for downstram graph anallystics
-        orderUsers[o.orderID] = o.userID;
-
-        // b. blacklist check - fastest path, O(1)
-        if (blocked.count(o.userID)) {
-            cout<< "[BLOCKEd]" << o.userID << " - on permanent blacklist\n";
-            db.updateOrderStatus(o.orderID, "REJECTED");
-            db.saveRiskEvent(o.userID, o.orderID, 1.0, "permanent blacklist", "REJECT");
-
-            return;
-        }
-
-        // c. compute mid price from current book state
-        double midPrice = 0.0;
-        if (book.hasBuys() && book.hasSells()){
-            midPrice = (book.getBestBidPrice() + book.getBestAskPrice()) / 2.0;
-        }
-
-        // d. extract 6 featuews and print them
-        FeatureVector fv = extractor.extract(o, midPrice);
-        fv.print(o.userID);
-
-        // e. ML score form py bridge
-        double mlScore = bridge.score(fv.toJSON());
-               
-        // f. graph network score form trading history
-        double graphScore = tradeGraph.getNetworkScore(o.userID);
-
-        // g. combined score - but ML is weighted heavier (cuz its trained)
-        // here graph will adds signal from network patterns which ML cna't see through
-        double combined = (mlScore * ML_WEIGHT) + (graphScore * GRAPH_WEIGHT);
-
-        cout<< "    [ML]    score="
-            << fixed << setprecision(4) << mlScore << "\n"
-            << "    [GRAPH] score=" << graphScore  << "\n"
-            << "    [FINAL] score=" << combined    << "\n";
+// 04 :- it will hepl to detemine escalation action like
+// prevFlags = how many times already flagged (from risk_log)
+// thisFlag  = prevFlags + 1 (current incident)
+string escalateAction(DatabaseHandler& db, const string& userID,
+                       int tempAt, int permAt) {
+    int prevFlags = db.getUserFlagCount(userID);
+    int thisFlag  = prevFlags + 1;
+    if (thisFlag < tempAt) return "WARN";
+    if (thisFlag < permAt) return "TEMP_BLOCK";
+    return "PERMANENT_BLOCK";
+}
 
 
+void processOrder(const Order& o,
+                   DatabaseHandler& db, OrderBook& book,
+                   FeatureExtractor& extractor, Bridge& bridge,
+                   Graph& tradeGraph,
+                   unordered_set<string>& blocked,
+                   unordered_map<int, string>& orderUsers,
+                   double THRESHOLD, double ML_WEIGHT,
+                   double GRAPH_WEIGHT, int TEMP_AT, int PERM_AT)
+{
+    if (!db.saveOrder(o))
+        cerr << Color::yellow("[WARN] order " + to_string(o.orderID) + " not saved\n");
+
+    orderUsers[o.orderID] = o.userID;
+
+    if (blocked.count(o.userID)) {
+        cout << Color::red("[BLOCKED] " + o.userID + " — permanent blacklist\n");
+        db.updateOrderStatus(o.orderID, "REJECTED");
+        db.saveRiskEvent(o.userID, o.orderID, 1.0, "permanent blacklist", "REJECT");
+        return;
+    }
+
+    double mid = 0.0;
+    if (book.hasBuys() && book.hasSells())
+        mid = (book.getBestBidPrice() + book.getBestAskPrice()) / 2.0;
+
+    FeatureVector fv = extractor.extract(o, mid);
+    fv.print(o.userID);
+
+    double mlScore    = bridge.score(fv.toJSON());
+    double graphScore = tradeGraph.getNetworkScore(o.userID);
+    double combined   = (mlScore * ML_WEIGHT) + (graphScore * GRAPH_WEIGHT);
+
+    cout << "       [ML]    score=" << fixed << setprecision(4) << mlScore << "\n"
+         << "       [GRAPH] score=" << graphScore << "\n"
+         << "       [FINAL] score=" << combined   << "\n";
+
+    if (combined > THRESHOLD) {
+        string action = escalateAction(db, o.userID, TEMP_AT, PERM_AT);
+        cout << Color::red("[FLAGGED] " + o.userID
+                          + " combined=" + to_string(combined)
+                          + " action="   + action) << "\n";
+        db.updateOrderStatus(o.orderID, "REJECTED");
+        db.saveRiskEvent(o.userID, o.orderID, combined,
+                         "combined ML+graph score", action);
+        if (action == "PERMANENT_BLOCK") blocked.insert(o.userID);
+        return;
+    }
+    cout << Color::green("[ALLOWED] " + o.userID) << "\n";
+    book.addOrder(o);
+}
 
 
-
-        // h. verdict against combined score
-        if (combined > THRESHOLD){
-            string action = escalate(o.userID);
-
-            cout<< "[FLAGGED] " << o.userID
-                << " score = "  << combined
-                << " action = " << action << "\n";
-
-            db.updateOrderStatus(o.orderID, "REJECTED");
-            db.saveRiskEvent(o.userID, o.orderID, combined, "Combined ML+graph score", action);
-
-            return;
-        }
-
-        // i. add to order book
-        cout << "[ALLOWED] " << o.userID << "\n"; 
-        book.addOrder(o);
-    };
-
-
-    // TEST ORDERS 
-
-    cout<< "\n===== processing orders =====\n";
-    
-    insertOrder(makeOrder(1, "I1001", 104.00, 10, "BUY"));
-    insertOrder(makeOrder(2, "I1002", 103.50,  5, "BUY"));
-    insertOrder(makeOrder(3, "I1003", 101.00, 20, "BUY"));
-    insertOrder(makeOrder(4, "I1004", 103.00,  8, "SELL"));
-    insertOrder(makeOrder(5, "I1005", 103.25,  5, "SELL"));
-    insertOrder(makeOrder(6, "I1006", 106.00, 10, "SELL"));
-
-
-    cout << "\n==== wash trading demo orders ====\n";
-
-    // round 1: I2001 buys from I2002
-    insertOrder(makeOrder(10, "I2001", 105.00, 5, "BUY"));
-    insertOrder(makeOrder(11, "I2002", 104.50, 5, "SELL"));
-
-    // round 2: I2002 buys back from I2001  ← completes the cycle!
-    insertOrder(makeOrder(12, "I2002", 105.00, 5, "BUY"));
-    insertOrder(makeOrder(13, "I2001", 104.50, 5, "SELL"));
-
-    // 06 :- continuous loop to match the trade...
-
-    int tradeCount = 0;
-    cout << "\n==== MATCHING ENGINE RUNNING(only allowed orders) ====\n";
-
+void runMatchLoop(OrderBook& book, DatabaseHandler& db,
+                   Graph& tradeGraph,
+                   unordered_map<int, string>& orderUsers)
+{
     while (book.hasBuys() && book.hasSells()) {
         if (book.getBestBid() < book.getBestAsk()) break;
         
@@ -307,23 +316,20 @@ int runHistory(int argc, char* argv[]) {
         return 0;
     }
 
-    cout<< Color::bold("\033[1m==== Transaction History: " + userID + " ====\033[0m") << "\n";
+    cout<< Color::bold("==== Transaction History: " + userID + " ====") << "\n";    for (const auto& r : records) {
     for (const auto& r : records) {
-        bool isOutFlow = (r.type == "WITHDRAW" || r.type == "TRADE_BUY");
-
-        string sign = isOutFlow ? "-" : "+";
-        string colored = isOutFlow ? Color::red(sign + "Rd. ") : Color::green(sign + "Rs. ");
-
-        cout<< " " << r.type << " " << colored
-            << fixed << setprecision(2) << r.amount
-            << "  -> balance Rs." << r.balanceAfter;
-        
+        bool out = (r.type == "WITHDRAW" || r.type == "TRADE_BUY");
+        string sign    = out ? "-" : "+";
+        string colored = out ? Color::red(sign + "Rs. ") : Color::green(sign + "Rs. ");
+        cout << "  " << r.type << "  " << colored
+             << fixed << setprecision(2) << r.amount
+             << "  -> balance Rs." << r.balanceAfter;
         if (!r.note.empty()) cout << "  (" << r.note << ")";
         cout << "\n";
     }
     return 0;
 }
-
+~~
 void runInteractive(DatabaseHandler& db) {
     cout<< "\033[36==== Live Session Started. Type commands below (e.g. 'history I2001' or 'exit') ====\033[0m\n";
 
