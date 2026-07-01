@@ -10,35 +10,61 @@
 # include "../include/bridge.h"
 # include "../include/config.h"
 # include "../include/graph.h"
+# include "../include/colors.h"
 using namespace std;
 
-int runHistory(int argc, char* agrv[]);
-void runInterctive(DatabaseHandler& db);
+int  runHistory(int argc, char* argv[]);
+int  runReset();                          
+void runInteractive(DatabaseHandler& db,  
+                     Bridge& bridge, OrderBook& book,
+                     FeatureExtractor& extractor, Graph& tradeGraph,
+                     unordered_set<string>& blocked,
+                     unordered_map<int, string>& orderUsers,
+                     double THRESHOLD, double ML_WEIGHT,
+                     double GRAPH_WEIGHT, int TEMP_AT, int PERM_AT);
+
+Order makeOrder(int id, const string& user,
+                double price, int qty, const string& side);
+
+string escalateAction(DatabaseHandler& db, const string& userID,
+                       int tempAt, int permAt);
+
+void processOrder(const Order& o,
+                   DatabaseHandler& db, OrderBook& book,
+                   FeatureExtractor& extractor, Bridge& bridge,
+                   Graph& tradeGraph,
+                   unordered_set<string>& blocked,
+                   unordered_map<int, string>& orderUsers,
+                   double THRESHOLD, double ML_WEIGHT,
+                   double GRAPH_WEIGHT, int TEMP_AT, int PERM_AT);
+
+void runMatchLoop(OrderBook& book, DatabaseHandler& db,
+                   Graph& tradeGraph,
+                   unordered_map<int, string>& orderUsers);
 
 void printUsage() {
-    cout<< "Usage: ./build/vigil <command> [args]\n"
-        << "Commands:\n"
-        << "    history         show the last 10 transactions for a user\n"
-        << ;
+    cout << "Usage: ./build/vigil <command> [args]\n"
+         << "Commands:\n"
+         << "  run           run the demo order set\n"
+         << "  interactive   guided menu — buy, sell, deposit, withdraw\n"
+         << "  history <uid> last 10 transactions for a user\n"
+         << "  reset         wipe vigil.db and start fresh\n"
+         << "  --help        this message\n";   
 }
-
 
 int main(int argc, char* argv[]){
 
-    if (argc > 1) {
-        string command = argv[1];
-        if (command == "history") { 
-            return runHistory(argc, argv);
-        } else if (command == "interactive"){
-            DatabaseHandler db("vigil.db");
-            if (!db.isOpen()) return 1;
-            runInterctive(db);
-            return 0;
-        } else {
-            printUsage();
-            return 1;
-        }
+    if (argc < 2) { printUsage(); return 1; }
+
+    string cmd = argv[1];
+    if (cmd == "history")     return runHistory(argc, argv);
+    if (cmd == "reset")       return runReset();       ← fix 6: now handled
+    if (cmd == "--help")      { printUsage(); return 0; }
+    if (cmd != "run" && cmd != "interactive") {
+        cerr<< Color::red("[ERROR] unknown command: " + cmd) << "\n";
+        printUsage(); return 1;
     }
+
 
     // 01 :- config: reads settings.json before anything else
     Config cfg("config/settings.json");
@@ -54,9 +80,9 @@ int main(int argc, char* argv[]){
     const double CYCLE_BASE   = cfg.getDouble("cycle_base_score",      0.50);
 
 
-    cout<< "[CONFIG] ml_weight=" << ML_WEIGHT
-        << "      graph_weight=" << GRAPH_WEIGHT
-        << "      cycle_base="   << CYCLE_BASE << "\n";
+    cout<< Color::dim("[CONFIG] threshold=" + to_string(THRESHOLD)
+                      + "  temp_at=" + to_string(TEMP_AT)
+                      + "  perm_at=" + to_string(PERM_AT)) << "\n";
 
 
 
@@ -67,7 +93,7 @@ int main(int argc, char* argv[]){
     // oad previously blocked users into unordered_set for O(1)
     auto blacklist = db.loadBlacklist();
     unordered_set<string> blocked(blacklist.begin(), blacklist.end());
-    cout<< "[ENIGINE]" << blacklist.size() << " users on permanent blacklist\n";
+    cout<< "[ENIGINE]" << blocked.size() << " users on permanent blacklist\n";
 
     
 
@@ -75,7 +101,7 @@ int main(int argc, char* argv[]){
     // run ./vigil from project root so the path resolves correctly
     Bridge bridge("python3 python/bridge/scorer.py");
     if (!bridge.isReady()){
-        cerr<< "[WARN] Bridge not ready - using fallback score\n";
+        cerr<< Color::yellow("[WARN] Bridge not ready - using fallback score") << "\n";
     }
 
     
@@ -83,7 +109,7 @@ int main(int argc, char* argv[]){
     FeatureExtractor extractor;
     Graph tradeGraph;
 
-    tradeGraph.setCycleBaseScore(CYCLE_BASE)
+    tradeGraph.setCycleBaseScore(CYCLE_BASE);
     
     unordered_map<int, string> orderUsers;
 
@@ -91,10 +117,11 @@ int main(int argc, char* argv[]){
     for (const auto& [buyer, seller] : historicPairs) {
         tradeGraph.addEdge(buyer, seller);  // it will rebuild irderUsers from DB for graph - partial
     }
-    if (!historicPairs.empty()) {
-        cout<< "[GRAPH] rebuilt"
-            << historicPairs.size()
-            << " edges from DB history\n";
+    if (cmd == "interactive") {
+        runInteractive(db, bridge, book, extractor, tradeGraph,
+                        blocked, orderUsers, THRESHOLD,
+                        ML_WEIGHT, GRAPH_WEIGHT, TEMP_AT, PERM_AT);
+        return 0;
     }
 
 
@@ -223,18 +250,16 @@ int main(int argc, char* argv[]){
     cout << "\n==== MATCHING ENGINE RUNNING(only allowed orders) ====\n";
 
     while (book.hasBuys() && book.hasSells()) {
-        if (book.getBestBid() < book.getBestAsk()) {
-            break;
-        }
+        if (book.getBestBid() < book.getBestAsk()) break;
+        
         Trade t = book.matchOrders();
-        if (t.quantity == 0) {
-            break; 
-        }
+
+        if (t.quantity == 0) break; 
+        
         db.saveTrade(t);
     
         if (t.buyFilled)  db.updateOrderStatus(t.buyOrderID, "FILLED");
         if (t.sellFilled) db.updateOrderStatus(t.sellOrderID, "FILLED");
-        tradeCount++;
     
 
     // Graph : look up user IDs and add edge
@@ -242,7 +267,7 @@ int main(int argc, char* argv[]){
         string seller = orderUsers.count(t.sellOrderID) ? orderUsers[t.sellOrderID] : "?";
         
         tradeGraph.addEdge(buyer, seller);
-        cout<< "[GRAPH] edge: "<< buyer << " -> " << seller << "\n";
+        cout<< Color::cyan("[GRAPH] edge: "+ buyer + " -> " + seller) << "\n";
 
         // check both ends of new edge for cycles
         bool ringDetected = tradeGraph.isInCycle(buyer) || tradeGraph.isInCycle(seller);
@@ -250,38 +275,21 @@ int main(int argc, char* argv[]){
         if (ringDetected) {
             // find all connected to this ring via BFS
             auto component = tradeGraph.getConnectedComponent(buyer);
-            cout<< "[RING] wash trade ring detected - "
-                << component.size() << " members:\n";\
+            cout<< Color::red("[RING] wash trade ring detected - "
+                + to_string(component.size()) + " member") << "\n";
 
             for (const auto& member : component) {
                 // only flag users confiremed to be in cycle
                 if (tradeGraph.isInCycle(member)) {
-                    cout << " [RING] flagging " << member << "\n";
+                    cout << Color::red(" [RING] flagging " + member) << "\n";
                     db.saveRiskEvent(member, t.buyOrderID, 0.9, "circular trading ring detected", "WARN");
                 } else {
                     // connected but not in cycle - may be innocent counterparty
-                    cout<< "  [RING] connected: " << member
-                        << " (no direct cycle with them)\n";
+                    cout<< "  [RING] connected: " << member <<"\n";
                 }
             }
         }
     }
-
-
-
-    // PRINT FULL GRAPH SNAPSHOT
-    cout<< "\n[GRAPH] trading network:\n";
-
-    cout<< "\n[GRAPH] session summary: "
-        << tradeGraph.getSummary() << "\n";
-    tradeGraph.print();
-    auto circular = tradeGraph.getCircularTraders();
-    if (!circular.empty()){
-        cout<< "[GRAPH] " << circular.size()
-            << " users flagged for circular trading\n";
-    }
-
-    return 0;
 }
 
 int runHistory(int argc, char* argv[]) {
