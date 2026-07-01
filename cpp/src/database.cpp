@@ -84,6 +84,10 @@ bool DatabaseHandler::createTables(){
             timestamp     INTEGER NOT NULL,
             note          TEXT
         );
+        CREATE TABLE IF NOT EXISTS accounts (
+            userID  TEXT PRIMARY KEY,
+            balance REAL NOT NULL DEFAULT 0.0
+        );
     )SQL";  
 
     bool ok = execSQL(sql);
@@ -207,7 +211,7 @@ vector<string> DatabaseHandler::loadBlacklist(){
 
     sqlite3_stmt* stmt = nullptr;
     
-    const char* sql = "SELECT DISTINCT userID FROM orders WHERE fraudFlag = 1";
+    const char* sql = "SELECT DISTINCT userID FROM risk_log WHERE action='PERMANENT_BLOCK'";
     int rc = sqlite3_prepare_v2(db_, sql, -1, &stmt, nullptr);
     if (rc != SQLITE_OK){
         cerr<< "[DB] loadBlacklist prepare: "
@@ -321,7 +325,7 @@ vector<pair <string, string >> DatabaseHandler::getTradePairs() {
 }
 
 bool DatabaseHandler::logTransaction(const string& userID, const string& type, 
-                                     double amount, double balanceAfter, double string& note) {
+                                     double amount, double balanceAfter, const string& note) {
 
     if (!db_) return false;
     const char* sql = 
@@ -410,7 +414,7 @@ bool DatabaseHandler::settleTrade(const string& buyerID, const string& sellerID,
         return true;
     }
 
-    execSQL("ROOLBACK;");
+    execSQL("ROLLBACK;");
     cerr<< "[DB] settleTrade failed - rolled back\n";
     return false;
 }
@@ -450,7 +454,7 @@ vector<TransactionRecord> DatabaseHandler::getTransactionsForUser(const string& 
     if (!db_) return records;
     const char* sql =
         "SELECT tnxID, userID, type, amount, balanceAfter, timestamp, note "
-        "FROM transactions WHERE userID = ? ORDER BY tnxID DESC LIMIT ?";
+        "FROM transactions WHERE userID = ? ORDER BY txnID DESC LIMIT ?";
     
         sqlite3_stmt* stmt = nullptr;
 
