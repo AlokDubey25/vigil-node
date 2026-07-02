@@ -147,7 +147,7 @@ TEST_CASE("getSummary returns correct node and edge counts") {
     string s = g.getSummary();
     REQUIRE(s.find("nodes=2") != string::npos);
     REQUIRE(s.find("edges=2") != string::npos);
-    REQUIRE(s.find("circular_trades=2") != string::npos);
+    REQUIRE(s.find("circular_traders=2") != string::npos);
 }
 
 TEST_CASE("setCycleBaseScore changes the cycle contribution") {

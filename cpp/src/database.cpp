@@ -468,7 +468,7 @@ vector<TransactionRecord> DatabaseHandler::getTransactionsForUser(const string& 
     vector<TransactionRecord> records;
     if (!db_) return records;
     const char* sql =
-        "SELECT tnxID, userID, type, amount, balanceAfter, timestamp, note "
+        "SELECT txnID, userID, type, amount, balanceAfter, timestamp, note "
         "FROM transactions WHERE userID = ? ORDER BY txnID DESC LIMIT ?";
     
         sqlite3_stmt* stmt = nullptr;
