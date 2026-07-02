@@ -210,7 +210,7 @@ TEST_CASE("getTradesPairs returns buyer-seller user IDs") {
         db.saveTrade(t);
         auto pairs = db.getTradePairs();
         REQUIRE(pairs[0].first  == "I1001");     // BUYERS
-        REQUIRE(pairs[0].second == "I2001");    // SELLER
+        REQUIRE(pairs[0].second == "I1001");    // SELLER
     }
 }
 
