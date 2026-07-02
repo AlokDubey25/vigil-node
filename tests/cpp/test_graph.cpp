@@ -164,6 +164,6 @@ TEST_CASE("setCycleBaseScore changes the cycle contribution") {
     }
     SECTION("custom cycleBase = 0.3") {
         g.setCycleBaseScore(0.3);
-        REQUIRE(g.setCycleBaseScore("I1") == Approx(0.3));
+        REQUIRE(g.getNetworkScore("I1") == Approx(0.3));
     }
 }

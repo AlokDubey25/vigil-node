@@ -56,6 +56,8 @@ public:
     vector<TransactionRecord> getRecentTransactions(int limit = 10);
     vector<TransactionRecord> getTransactionsForUser(const string& userID, int limit = 10);
 
+    double getBalance(const string& userID);
+
     private:
         sqlite3* db_ = nullptr;
 

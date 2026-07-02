@@ -147,11 +147,11 @@ int main(int argc, char* argv[]){
     cout << "\n==== wash trading demo ====\n";
     insert(makeOrder(20, "I2001", 200.00,  5, "BUY"));
     insert(makeOrder(21, "I2002", 190.00,  5, "SELL"));
-    runMatchLoop(book, db, tradeGraph, orderUsers);   ← I2001 buys from I2002
+    runMatchLoop(book, db, tradeGraph, orderUsers);   
 
     insert(makeOrder(22, "I2002", 200.00,  5, "BUY"));
     insert(makeOrder(23, "I2001", 190.00,  5, "SELL"));
-    runMatchLoop(book, db, tradeGraph, orderUsers);   ← I2002 buys from I2001 → cycle!
+    runMatchLoop(book, db, tradeGraph, orderUsers);   
 
     cout << "\n[GRAPH] " << tradeGraph.getSummary() << "\n";
     tradeGraph.print();
@@ -315,20 +315,21 @@ int runHistory(int argc, char* argv[]) {
         return 0;
     }
 
-    cout<< Color::bold("==== Transaction History: " + userID + " ====") << "\n";    for (const auto& r : records) {
+    cout<< Color::bold("==== Transaction History: " + userID + " ====") << "\n";    
     for (const auto& r : records) {
-        bool out = (r.type == "WITHDRAW" || r.type == "TRADE_BUY");
-        string sign    = out ? "-" : "+";
-        string colored = out ? Color::red(sign + "Rs. ") : Color::green(sign + "Rs. ");
-        cout << "  " << r.type << "  " << colored
-             << fixed << setprecision(2) << r.amount
-             << "  -> balance Rs." << r.balanceAfter;
-        if (!r.note.empty()) cout << "  (" << r.note << ")";
-        cout << "\n";
-    }
+        for (const auto& r : records) {
+            bool out = (r.type == "WITHDRAW" || r.type == "TRADE_BUY");
+            string sign    = out ? "-" : "+";
+            string colored = out ? Color::red(sign + "Rs. ") : Color::green(sign + "Rs. ");
+            cout << "  " << r.type << "  " << colored
+                << fixed << setprecision(2) << r.amount
+                << "  -> balance Rs." << r.balanceAfter;
+            if (!r.note.empty()) cout << "  (" << r.note << ")";
+            cout << "\n";
+            }
     return 0;
+    }
 }
-
 
 void runInteractive(DatabaseHandler& db, Bridge& bridge,
                      OrderBook& book, FeatureExtractor& extractor,

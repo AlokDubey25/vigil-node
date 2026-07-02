@@ -76,21 +76,7 @@ bool Graph::dfsCycle(const string& start, const string& current, unordered_set<s
     return false;
 }
 
-double Graph::getNetworkScore(const string& userID) const{
-    double score = 0.0;
 
-    // biggest signal : if this user in circular trading pattern then wash trading = artificially infalting volume , highly sus
-    if (isInCycle(userID)) score += 0.5;
-
-    // secondary signal : like how many unique counterparties as legitimate traders have a diverse set of counterparties
-    // and these are always trading with same small ring = sus
-    int deg = getDegree(userID);
-    if (deg >= 3) score += 0.1;      // moderate concerntation
-    if (deg >= 5) score += 0.2;     // high concentration
-
-    // cap to [0.0,1.0]
-    return min(score, 1.0);
-} 
 
 vector<string> Graph::getConnectedComponent(const string& userID) const{
     vector<string> component;

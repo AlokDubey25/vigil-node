@@ -30,6 +30,21 @@ DatabaseHandler::~DatabaseHandler(){
     }
 }
 
+
+double DatabaseHandler::getBalance(const string& userID) {
+    if (!db_) return 0.0;
+    const char* sql = "SELECT balance FROM accounts WHERE userID = ?";
+    sqlite3_stmt* stmt = nullptr;
+    if (sqlite3_prepare_v2(db_, sql, -1, &stmt, nullptr) != SQLITE_OK) return 0.0;
+    sqlite3_bind_text(stmt, 1, userID.c_str(), -1, SQLITE_TRANSIENT);
+    double balance = 0.0;
+    if (sqlite3_step(stmt) == SQLITE_ROW)
+        balance = sqlite3_column_double(stmt, 0);
+    sqlite3_finalize(stmt);
+    return balance;
+}
+
+
 bool DatabaseHandler::execSQL(const string& sql){
     char* errMsg = nullptr;
     int rc = sqlite3_exec(db_, sql.c_str(), nullptr, nullptr, &errMsg);     // here was error as sql.c_str is a function pointer. It needs to be sql.c_str()
@@ -423,7 +438,7 @@ vector<TransactionRecord> DatabaseHandler::getRecentTransactions(int limit) {
     vector<TransactionRecord> records;
     if (!db_)  return records;
     const char* sql =
-        "SELECT txnID, userID, type amount, balanceAfter, timestamp, note "
+        "SELECT txnID, userID, type, amount, balanceAfter, timestamp, note "
         "FROM transactions ORDER BY txnID DESC LIMIT ?";
 
     sqlite3_stmt* stmt = nullptr;
