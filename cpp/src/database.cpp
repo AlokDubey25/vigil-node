@@ -395,7 +395,7 @@ bool DatabaseHandler::withdraw(const string& userID, double amount,
     
     if (rc != SQLITE_DONE) return false;
 
-    logTransaction(userID, type, amount, getBalance(userID), note);   ← new
+    logTransaction(userID, type, amount, getBalance(userID), note);   
     
     return true;
 }

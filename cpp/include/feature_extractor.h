@@ -42,6 +42,10 @@ struct FeatureVector{
 
     // basic rule check woks before ML exists and like it return teur if 2+ features look sus
     bool isSuspicious() const;
+
+    string friendlyVerdict(const FeatureVector& fv, double combined, double threshold);
+
+
 };
 
 

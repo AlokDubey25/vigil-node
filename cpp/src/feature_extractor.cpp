@@ -156,3 +156,29 @@ bool FeatureVector::isSuspicious() const{
     return flags >= 2;
     
 }
+
+string friendlyVerdict(const FeatureVector& fv, double combined, double threshold) {
+    if (combined <= threshold)
+        return "Order accepted — looks normal.";
+
+    std::vector<std::string> reasons;
+    if (fv.velocity > 20.0)        reasons.push_back("trading unusually fast");
+    if (fv.priceDeviation > 0.05)  reasons.push_back("placing an order far from the market price");
+    if (fv.sizeRatio > 5.0)         reasons.push_back("placing an unusually large order for this user");
+    if (fv.repeatPriceRate > 0.7)   reasons.push_back("repeatedly hitting the exact same price level");
+    if (fv.cancelRate > 0.7)        reasons.push_back("cancelling orders unusually often");
+
+    // none of the individual ML features tripped — the score came mostly
+    // from the graph side (wash trading ring), not any one behavioral signal
+    if (reasons.empty())
+        return "Order blocked — linked to a circular trading pattern with another account.";
+
+    std::ostringstream oss;
+    oss << "Order blocked — this looks suspicious: the user is ";
+    for (size_t i = 0; i < reasons.size(); i++) {
+        if (i > 0) oss << (i == reasons.size() - 1 ? " and " : ", ");
+        oss << reasons[i];
+    }
+    oss << ".";
+    return oss.str();
+}
