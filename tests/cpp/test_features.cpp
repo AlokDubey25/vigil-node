@@ -309,3 +309,36 @@ TEST_CASE("feature caps prevent extreme values"){
         REQUIRE(fv.sizeRatio == Approx(20.0));
     }
 }
+
+// Test - 12 : 01 Final verdict
+TEST_CASE("friendlyVerdict — accepted order") {
+    FeatureVector fv;   // all defaults, clean
+    REQUIRE(friendlyVerdict(fv, 0.2, 0.8) == "Order accepted — looks normal.");
+}
+
+// Test - 12 : 02 Final verdict
+TEST_CASE("friendlyVerdict — single flag, no 'and'") {
+    FeatureVector fv;
+    fv.velocity = 30.0;
+    std::string v = friendlyVerdict(fv, 0.9, 0.8);
+    REQUIRE(v.find("trading unusually fast") != std::string::npos);
+    REQUIRE(v.find(" and ") == std::string::npos);
+}
+
+// Test - 12 : 03 Final verdict
+TEST_CASE("friendlyVerdict — two flags joined with 'and'") {
+    FeatureVector fv;
+    fv.velocity  = 30.0;
+    fv.sizeRatio = 8.0;
+    std::string v = friendlyVerdict(fv, 0.9, 0.8);
+    REQUIRE(v.find("trading unusually fast") != std::string::npos);
+    REQUIRE(v.find("unusually large order") != std::string::npos);
+    REQUIRE(v.find(" and ") != std::string::npos);
+}
+
+// Test - 12 : 04 Final verdict
+TEST_CASE("friendlyVerdict — blocked with no individual flag falls back to network language") {
+    FeatureVector fv;   // all features clean — score crossed purely via graph
+    std::string v = friendlyVerdict(fv, 0.9, 0.8);
+    REQUIRE(v.find("circular trading pattern") != std::string::npos);
+}
