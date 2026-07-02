@@ -198,7 +198,6 @@ string escalateAction(DatabaseHandler& db, const string& userID,
     return "PERMANENT_BLOCK";
 }
 
-
 void processOrder(const Order& o,
                    DatabaseHandler& db, OrderBook& book,
                    FeatureExtractor& extractor, Bridge& bridge,
@@ -213,12 +212,29 @@ void processOrder(const Order& o,
 
     orderUsers[o.orderID] = o.userID;
 
+    // 1. Permanent Blacklist Check
     if (blocked.count(o.userID)) {
-        cout << Color::red("[BLOCKED] " + o.userID + " — permanent blacklist\n");
+        cout << Color::red("[BLOCKED] " + o.userID + " — permanent blacklist(no scoring)") << "\n";
+        cout << Color::yellow("  \"Order blocked — this user has been permanently banned for repeated fraud.\"") << "\n";  
         db.updateOrderStatus(o.orderID, "REJECTED");
         db.saveRiskEvent(o.userID, o.orderID, 1.0, "permanent blacklist", "REJECT");
         return;
     }
+
+    // 2. Insufficient Funds Check
+    if (o.side == "BUY") {
+        double cost = o.price * o.quantity;
+        double balance = db.getBalance(o.userID);
+        if (balance < cost) {
+            cout << Color::red("[REJECTED] " + o.userID + " — insufficient funds") << "\n";
+            cout << Color::yellow("  \"Order blocked — not enough money in your account for this purchase.\"") << "\n";
+            db.updateOrderStatus(o.orderID, "REJECTED");
+            db.saveRiskEvent(o.userID, o.orderID, 0.0, "insufficient funds", "REJECT_FUNDS");
+            return;
+        }
+    }
+
+
 
     double mid = 0.0;
     if (book.hasBuys() && book.hasSells())
@@ -234,6 +250,11 @@ void processOrder(const Order& o,
     cout << "       [ML]    score=" << fixed << setprecision(4) << mlScore << "\n"
          << "       [GRAPH] score=" << graphScore << "\n"
          << "       [FINAL] score=" << combined   << "\n";
+
+    // 3. Plain-English Main Verdict Sentence (Console-only UX layer)
+    string friendly = friendlyVerdict(fv, combined, THRESHOLD);
+    cout << Color::yellow("  \"" + friendly + "\"") << "\n";
+
 
     if (combined > THRESHOLD) {
         string action = escalateAction(db, o.userID, TEMP_AT, PERM_AT);
@@ -313,20 +334,18 @@ int runHistory(int argc, char* argv[]) {
         return 0;
     }
 
-    cout<< Color::bold("==== Transaction History: " + userID + " ====") << "\n";    
+    cout<< Color::bold("==== Transaction History: " + userID + " ====") << "\n";
     for (const auto& r : records) {
-        for (const auto& r : records) {
-            bool out = (r.type == "WITHDRAW" || r.type == "TRADE_BUY");
-            string sign    = out ? "-" : "+";
-            string colored = out ? Color::red(sign + "Rs. ") : Color::green(sign + "Rs. ");
-            cout << "  " << r.type << "  " << colored
-                << fixed << setprecision(2) << r.amount
-                << "  -> balance Rs." << r.balanceAfter;
-            if (!r.note.empty()) cout << "  (" << r.note << ")";
-            cout << "\n";
-            }
-    return 0;
+        bool out = (r.type == "WITHDRAW" || r.type == "TRADE_BUY");
+        string sign    = out ? "-" : "+";
+        string colored = out ? Color::red(sign + "Rs. ") : Color::green(sign + "Rs. ");
+        cout << "  " << r.type << "  " << colored
+             << fixed << setprecision(2) << r.amount
+             << "  -> balance Rs." << r.balanceAfter;
+        if (!r.note.empty()) cout << "  (" << r.note << ")";
+        cout << "\n";
     }
+    return 0;
 }
 
 void runInteractive(DatabaseHandler& db, Bridge& bridge,

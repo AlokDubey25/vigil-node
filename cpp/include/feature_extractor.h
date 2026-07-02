@@ -9,6 +9,8 @@
 # include "order.h"
 using namespace std;
 
+
+
 // It will describe about one user's behaviour at one moment 
 // like this have each and every features which will be req for next model
 struct FeatureVector{
@@ -20,33 +22,35 @@ struct FeatureVector{
     double repeatPriceRate  = 0.0; // fraction of history at same price
 
 
-    // into vec for sending data to other engine for fraud detection
-    vector<double> toVector() const{
-        return {velocity, priceDeviation, cancelRate, sizeRatio, timeBetween, repeatPriceRate};
-    }
-
-    void print(const string& userID) const{
-        cout<< "[FV] " << userID
-            << fixed   << setprecision(3)
-            << " vel="     << velocity
-            << " pdev="    << priceDeviation
-            << " create="  << cancelRate
-            << " sratio="  << sizeRatio
-            << " tbetween="<< timeBetween
-            << " rpprice=" << repeatPriceRate
-            << "\n";
-    }
-
-    // for JSON
+    vector<double> toVector() const;
+    void print(const string& userID) const;
     string toJSON() const;
-
-    // basic rule check woks before ML exists and like it return teur if 2+ features look sus
     bool isSuspicious() const;
-
-    string friendlyVerdict(const FeatureVector& fv, double combined, double threshold);
-
-
 };
+
+string friendlyVerdict(const FeatureVector& fv, double combined, double threshold);
+
+    // void print(const string& userID) const{
+    //     cout<< "[FV] " << userID
+    //         << fixed   << setprecision(3)
+    //         << " vel="     << velocity
+    //         << " pdev="    << priceDeviation
+    //         << " create="  << cancelRate
+    //         << " sratio="  << sizeRatio
+    //         << " tbetween="<< timeBetween
+    //         << " rpprice=" << repeatPriceRate
+    //         << "\n";
+    // }
+
+    // // for JSON
+    // string toJSON() const;
+
+    // // basic rule check woks before ML exists and like it return teur if 2+ features look sus
+    // bool isSuspicious() const;
+
+
+
+
 
 
 // and now this will extract each features from one to other model

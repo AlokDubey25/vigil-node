@@ -127,6 +127,28 @@ double FeatureExtractor::calcRepeatPriceRate(const Order& current, const deque<O
     return static_cast<double>(matches) / orders.size();
 }
 
+vector<double> FeatureVector::toVector() const {
+    return {
+        velocity,
+        priceDeviation,
+        cancelRate,
+        sizeRatio,
+        timeBetween,
+        repeatPriceRate
+    };
+}
+
+void FeatureVector::print(const string& userID) const {
+    cout << "[FV] " << userID
+         << fixed << setprecision(3)
+         << " vel="      << velocity
+         << " pdev="     << priceDeviation
+         << " cancel="   << cancelRate
+         << " sratio="   << sizeRatio
+         << " tbetween=" << timeBetween
+         << " rpprice="  << repeatPriceRate
+         << "\n";
+}
 
 // toJSON for buildiing [v1,v2,v3,v4,v5,v6] - this exact format will go to py for fraud detection
 string FeatureVector::toJSON() const{
@@ -161,9 +183,9 @@ string friendlyVerdict(const FeatureVector& fv, double combined, double threshol
     if (combined <= threshold)
         return "Order accepted — looks normal.";
 
-    std::vector<std::string> reasons;
-    if (fv.velocity > 20.0)        reasons.push_back("trading unusually fast");
-    if (fv.priceDeviation > 0.05)  reasons.push_back("placing an order far from the market price");
+    vector<string> reasons;
+    if (fv.velocity > 20.0)         reasons.push_back("trading unusually fast");
+    if (fv.priceDeviation > 0.05)   reasons.push_back("placing an order far from the market price");
     if (fv.sizeRatio > 5.0)         reasons.push_back("placing an unusually large order for this user");
     if (fv.repeatPriceRate > 0.7)   reasons.push_back("repeatedly hitting the exact same price level");
     if (fv.cancelRate > 0.7)        reasons.push_back("cancelling orders unusually often");
@@ -173,7 +195,7 @@ string friendlyVerdict(const FeatureVector& fv, double combined, double threshol
     if (reasons.empty())
         return "Order blocked — linked to a circular trading pattern with another account.";
 
-    std::ostringstream oss;
+    ostringstream oss;
     oss << "Order blocked — this looks suspicious: the user is ";
     for (size_t i = 0; i < reasons.size(); i++) {
         if (i > 0) oss << (i == reasons.size() - 1 ? " and " : ", ");
