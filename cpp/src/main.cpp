@@ -46,7 +46,7 @@ void printUsage() {
     cout << "Usage: ./build/vigil <command> [args]\n"
          << "Commands:\n"
          << "  run           run the demo order set\n"
-         << "  interactive   guided menu — buy, sell, deposit, withdraw\n"
+         << "  interactive   guided menu — buy, sell, deposit, withdraw, and more\n"
          << "  history <uid> last 10 transactions for a user\n"
          << "  reset         wipe vigil.db and start fresh\n"
          << "  --help        this message\n";   
@@ -134,10 +134,8 @@ int main(int argc, char* argv[]){
     cout << "\n===== processing orders =====\n";
     insert(makeOrder(1, "I1001", 104.00, 10, "BUY"));
     insert(makeOrder(2, "I1002", 103.50,  5, "BUY"));
-    insert(makeOrder(3, "I1003", 101.00, 20, "BUY"));
-    insert(makeOrder(4, "I1004", 103.00,  8, "SELL"));
-    insert(makeOrder(5, "I1005", 103.25,  5, "SELL"));
-    insert(makeOrder(6, "I1006", 106.00, 10, "SELL"));
+    insert(makeOrder(3, "I1004", 103.00,  8, "SELL"));
+    insert(makeOrder(4, "I1005", 103.25,  5, "SELL"));
 
     cout << "\n==== matching normal orders ====\n";
     runMatchLoop(book, db, tradeGraph, orderUsers);
