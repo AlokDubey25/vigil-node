@@ -13,6 +13,8 @@ CREATE TABLE trades(tradeID INTEGER PRIMARY KEY AUTOINCREMENT, buyOrderID INTEGE
     sellOrderID INTEGER, price REAL, quantity INTEGER, timestamp INTEGER);
 CREATE TABLE risk_log(logID INTEGER PRIMARY KEY AUTOINCREMENT, userID TEXT,
     orderID INTEGER, fraudScore REAL, reason TEXT, action TEXT, timestamp INTEGER);
+CREATE TABLE transactions(txnID INTEGER PRIMARY KEY AUTOINCREMENT, userID TEXT,
+  type TEXT, amount REAL, balanceAfter REAL, timestamp INTEGER, note TEXT);
 """
 
 @pytest.fixture
@@ -20,10 +22,11 @@ def temp_db(tmp_path, monkeypatch):
     db_path = tmp_path / "test_vigil.db"
     conn    = sqlite3.connect(str(db_path))
     conn.executescript(SCHEMA)
-    conn.execute("INSERT INTO orders VALUES (1, 'I1', 100.0, 10, 'BUY', 1700000000, 'FILLED', 0.1, 0)")
-    conn.execute("INSERT INTO orders VALUES (2, 'I2', 100.0, 10, 'SELL', 1700000000, 'FILLED', 0.1, 0)")
-    conn.execute("INSERT INTO trades VALUES (1, 1, 2, 100.0, 10, 1700000000)")
-    conn.execute("INSERT INTO risk_log VALUES (1, 'I1', 1, 0.9, 'circular trading ring detected', 'WARN', 1700000000)")
+    conn.execute("INSERT INTO orders VALUES       (1, 'I1', 100.0, 10, 'BUY', 1700000000, 'FILLED', 0.1, 0)")
+    conn.execute("INSERT INTO orders VALUES       (2, 'I2', 100.0, 10, 'SELL', 1700000000, 'FILLED', 0.1, 0)")
+    conn.execute("INSERT INTO trades VALUES       (1, 1, 2, 100.0, 10, 1700000000)")
+    conn.execute("INSERT INTO risk_log VALUES     (1, 'I1', 1, 0.9, 'circular trading ring detected', 'WARN', 1700000000)")
+    conn.execute("INSERT INTO transactions VALUES (1,'I1','DEPOSIT',1000.0,1000.0,1700000000,'')")
     conn.commit(); conn.close()
 
     # monkeypatch we're using 'cuz the module-level DB_PATH constant so _connect() uses our temp file
@@ -54,3 +57,7 @@ def test_missing_db_returns_safe_defaults(monkeypatch):
     stats = db_reader.get_engine_stats()
     assert stats["total_orders"] == 0
     
+def test_transaction_feed_returns_rows(temp_db):
+    feed = db_reader.get_transaction_feed(10)
+    assert len(feed) == 1
+    assert feed[0]["type"] == "DEPOSIT"
