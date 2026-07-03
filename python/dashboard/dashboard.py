@@ -16,8 +16,8 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../.
 
 from python.dashboard.db_reader import (
     get_engine_stats, get_recent_orders,
-    get_risk_log, get_engine_status,
-    get_book_snapshot, get_change_marker, get_graph_data
+    get_risk_log, get_engine_status, get_book_snapshot, 
+    get_change_marker, get_graph_data, get_transaction_feed
 )
 
 REFRESH_SECS = 1
@@ -26,24 +26,27 @@ _quit_now    = threading.Event()
 
 
 # PANEL - 01 : ENGINE STATS
-def build_stats_panel() -> Panel:
-    stats = get_engine_stats()
-    t = Table.grid(padding=(0, 2))
-    t.add_column(style="bold cyan")
-    t.add_column(style="bold white", justify="right")
+def build_transactions_panel() -> Panel:
+    records = get_transaction_feed(8)
+    t = Table(box=box.SIMPLE, show_header=True, header_style="bold yellow", padding=(0,1))
+    t.add_column("User",    width=10)
+    t.add_column("Type",    width=12)
+    t.add_column("Amount",  justify="right", width=12)
+    t.add_column("New Balance", justify="right", width=14)
+    t.add_column("Note",    width=20)
 
-    t.add_row(" 📋  Total Orders",    str(stats.get("total_orders", 0)))
-    t.add_row(" ⚡  Trades Executed", str(stats.get("total_trades", 0)))
-    t.add_row(" 🚫  Orders Blocked",   str(stats.get("blocked", 0)))
-    t.add_row(" 📊  Fraud Rate",
-               f"[red]{stats['fraud_rate']}%[/red]" \
-               if stats["fraud_rate"] > 5 else
-               f"[green]{stats['fraud_rate']}%[/green]")        # can we make this optimize or better...??
-    
-    t.add_row(" 👤  Active Users", str(stats["active_users"]))
+    for r in records:
+        is_outflow = r["type"] in ("WITHDRAW", "TRADE_BUY")
+        sign  = "-" if is_outflow else "+"
+        color = "red" if is_outflow else "green"
+        amount_s = f"[{color}]{sign}Rs.{r['amount']:.2f}[/{color}]"
+        t.add_row(r["userID"], r["type"], amount_s,
+                  f"Rs.{r['balanceAfter']:.2f}", r["note"] or "")
 
-    return Panel(t, title="[bold cyan] 📊 Engine Stats [/bold cyan]",
-                 border_style="cyan", expand=True)
+    if not records:
+        t.add_row("—","—","—","—","—")
+
+    return Panel(t, title="[bold yellow]Money & Orders[/bold yellow]", border_style="yellow")
     
 # PANEL - 02 : RECENT ORDERS
 def build_orders_panel() -> Panel:
@@ -185,26 +188,24 @@ def _keyboard_listener():
 
 # MAIN : BUILDING FULL LAYOUT AND RUN LIVE REFRESH
 def build_full_layout(threshold: float) -> Layout:
-    root = Layout()
-
-    root.split_column(
+    return Layout(
         Layout(build_header(threshold), name="header", size=3),
-        Layout(name="body", ratio=1)
+        Layout(
+            Layout(
+                Layout(build_stats_panel(),  name="stats"),
+                Layout(build_orders_panel(), name="orders"),
+                direction="horizontal", ratio=1
+            ),
+            Layout(
+                Layout(build_risk_panel(),  name="risk"),
+                Layout(build_graph_panel(), name="graph"),
+                direction="horizontal", ratio=1
+            ),
+            Layout(build_transactions_panel(), name="transactions", size=8),  
+            direction="vertical"
+        ),
+        direction="vertical"
     )
-    root["body"].split_column(
-        Layout(name="top_row"),
-        Layout(name="bottom_row")
-    )
-    root["top_row"].split_row(
-        Layout(build_stats_panel(),  name="stats"),
-        Layout(build_orders_panel(), name="orders")
-    )
-    root["bottom_row"].split_row(
-        Layout(build_risk_panel(),  name="risk"),
-        Layout(build_graph_panel(), name="graph")
-    )
-
-    return root
 
 
 
@@ -218,7 +219,7 @@ def main():
     listener = threading.Thread(target=_keyboard_listener, daemon=True)
     listener.start()
 
-    last_marker, last_heartbeat  = (-1, -1), 0.0
+    last_marker, last_heartbeat = (-1, -1, -1), 0.0 
 
     try:
         with Live(build_full_layout(threshold), console=console,

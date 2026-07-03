@@ -124,17 +124,27 @@ def get_graph_data() -> Dict[str, Any]:
 
 
 def get_change_marker() -> tuple:
-    """Cheap poll - has anything changed since we last redrew?"""
     conn = _connect()
     if not conn:
-        return(0, 0)
-    
+        return (0, 0, 0)
     try:
-        max_order = conn.execute(
-            "SELECT COALESCE(MAX(orderID), 0) FROM orders").fetchone()[0]
-        max_log = conn.execute(
-            "SELECT COALESCE(MAX(logID), 0) FROM risk_log").fetchone()[0]
-        
-        return (max_order, max_log)
+        max_order = conn.execute("SELECT COALESCE(MAX(orderID),0) FROM orders").fetchone()[0]
+        max_log   = conn.execute("SELECT COALESCE(MAX(logID),0) FROM risk_log").fetchone()[0]
+        max_txn   = conn.execute("SELECT COALESCE(MAX(txnID),0) FROM transactions").fetchone()[0]  
+        return (max_order, max_log, max_txn)
+    finally:
+        conn.close()
+
+def get_transaction_feed(limit: int = 8) -> List[Dict]:
+    """Day 4 — money and orders together. Reads the transactions table (Day 1)."""
+    conn = _connect()
+    if not conn:
+        return []
+    try:
+        rows = conn.execute(
+            """SELECT txnID, userID, type, amount, balanceAfter, timestamp, note
+               FROM transactions ORDER BY txnID DESC LIMIT ?""", (limit,)
+        ).fetchall()
+        return [dict(r) for r in rows]
     finally:
         conn.close()
