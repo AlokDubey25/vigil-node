@@ -68,7 +68,7 @@ def get_book_snapshot(limit: int = 5) -> Dict[str, List[Dict]]:
                ORDER BY price DESC LIMIT ?""", (limit,)
         ).fetchall()
         sells = conn.execute(
-            """SELECt price, quantity, userID FROM orders
+            """SELECT price, quantity, userID FROM orders
                WHERE side='SELL' AND status='PENDING'
                ORDER BY price DESC LIMIT ?""", (limit,)
         ).fetchall()
