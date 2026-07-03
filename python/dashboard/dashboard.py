@@ -24,6 +24,13 @@ REFRESH_SECS = 1
 _paused      = threading.Event()
 _quit_now    = threading.Event()
 
+ACTION_LABELS = {
+    "WARN":            "[yellow]Warning issued[/yellow]",
+    "TEMP_BLOCK":      "[orange1]Temporarily flagged[/orange1]",
+    "PERMANENT_BLOCK": "[bold red]Permanently banned[/bold red]",
+    "REJECT":          "[red]Blocked (banned user)[/red]",       
+    "REJECT_FUNDS":    "[red]Insufficient funds[/red]",           
+}
 
 # PANEL - 01 : ENGINE STATS
 def build_transactions_panel() -> Panel:
@@ -85,13 +92,7 @@ def build_risk_panel() -> Panel:
     t.add_column("Reason",  width=24)
 
     for e in events:
-        action_s = {
-            "PERMANENT_BLOCK": "[bold red]PERMANENT_BLOCK[/]",
-            "TEMP_BLOCK":      "[bold orange]TEMP_BLOCK[/]",
-            "WARN":            "[yellow]WARN[/]",
-            "REJECT":          "[red]REJECT[/]",
-            "REJECT_FUNDS":    "[red]INSUFFICIENT FUNDS[/]",
-        }.get(e["action"], e["action"])
+        action_s = ACTION_LABELS.get(e["action"], e["action"]) 
         t.add_row(e["userID"], 
                   f"{e['fraudScore']:.3f}",
                   action_s, e["reason"][:24])
