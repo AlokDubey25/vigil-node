@@ -33,6 +33,22 @@ ACTION_LABELS = {
 }
 
 # PANEL - 01 : ENGINE STATS
+def build_stats_panel() -> Panel:
+    stats = get_engine_stats()
+    t = Table(box=box.SIMPLE, show_header=False, padding=(0, 2))
+    t.add_column("Metric", style="dim", width=14)
+    t.add_column("Value", justify="right", width=10)
+
+    t.add_row("Total Orders",  str(stats["total_orders"]))
+    t.add_row("Total Trades",  str(stats["total_trades"]))
+    t.add_row("Blocked",       f"[red]{stats['blocked']}[/red]")
+    t.add_row("Fraud Rate",    f"{stats['fraud_rate']:.1f}%")
+    t.add_row("Active Users",  str(stats["active_users"]))
+
+    return Panel(t, title="[bold green] 📊 Engine Stats [/bold green]",
+                 border_style="green", expand=True)
+
+# PANEL - 02 : TRANSACTIONS
 def build_transactions_panel() -> Panel:
     records = get_transaction_feed(8)
     t = Table(box=box.SIMPLE, show_header=True, header_style="bold yellow", padding=(0,1))
@@ -55,7 +71,7 @@ def build_transactions_panel() -> Panel:
 
     return Panel(t, title="[bold yellow]Money & Orders[/bold yellow]", border_style="yellow")
     
-# PANEL - 02 : RECENT ORDERS
+# PANEL - 03 : RECENT ORDERS
 def build_orders_panel() -> Panel:
     orders = get_recent_orders(8)
     t = Table(box=box.SIMPLE, show_header=True,
@@ -81,7 +97,7 @@ def build_orders_panel() -> Panel:
     return Panel(t, title="[bold blue] 🛒 Recent Orders [/bold blue]",
                      border_style="blue", expand=True)
     
-# PANEL - 03 : RISK LOG
+# PANEL - 04 : RISK LOG
 def build_risk_panel() -> Panel:
     events = get_risk_log(8)
     t = Table(box=box.SIMPLE, show_header=True,
@@ -100,7 +116,7 @@ def build_risk_panel() -> Panel:
     return Panel(t, title="[bold red] ⚠️ RISK Log [/bold red]",
                      border_style="red", expand=True)
     
-# PANEL - 04 : ORDER BOOK SNAPSHOT 
+# PANEL - 05 : ORDER BOOK SNAPSHOT 
 def build_book_panel() -> Panel:
     book = get_book_snapshot(5)
 
@@ -171,6 +187,8 @@ def build_graph_panel() -> Panel:
 
 def _keyboard_listener():
     """Runs in a background thread - reads single keypreses without Enter."""
+    if not sys.stdin.isatty():
+        return
     fd  = sys.stdin.fileno()
     old = termios.tcgetattr(fd)
     try:
@@ -189,24 +207,25 @@ def _keyboard_listener():
 
 # MAIN : BUILDING FULL LAYOUT AND RUN LIVE REFRESH
 def build_full_layout(threshold: float) -> Layout:
-    return Layout(
+    layout = Layout()
+    layout.split_column(
         Layout(build_header(threshold), name="header", size=3),
-        Layout(
-            Layout(
-                Layout(build_stats_panel(),  name="stats"),
-                Layout(build_orders_panel(), name="orders"),
-                direction="horizontal", ratio=1
-            ),
-            Layout(
-                Layout(build_risk_panel(),  name="risk"),
-                Layout(build_graph_panel(), name="graph"),
-                direction="horizontal", ratio=1
-            ),
-            Layout(build_transactions_panel(), name="transactions", size=8),  
-            direction="vertical"
-        ),
-        direction="vertical"
+        Layout(name="middle"),
+        Layout(build_transactions_panel(), name="transactions", size=8),
     )
+    layout["middle"].split_column(
+        Layout(name="row1"),
+        Layout(name="row2"),
+    )
+    layout["row1"].split_row(
+        Layout(build_stats_panel(),  name="stats"),
+        Layout(build_orders_panel(), name="orders"),
+    )
+    layout["row2"].split_row(
+        Layout(build_risk_panel(),  name="risk"),
+        Layout(build_graph_panel(), name="graph"),
+    )
+    return layout
 
 
 
@@ -217,8 +236,9 @@ def main():
     console.print(f"[bold cyan]Vigil Node Dashboard[/] - started {now_str}")
     console.print("Ctrl+C to exit\n")
 
-    listener = threading.Thread(target=_keyboard_listener, daemon=True)
-    listener.start()
+    if sys.stdin.isatty():
+        listener = threading.Thread(target=_keyboard_listener, daemon=True)
+        listener.start()
 
     last_marker, last_heartbeat = (-1, -1, -1), 0.0 
 

@@ -44,6 +44,9 @@ FeatureVector FeatureExtractor::extract(const Order& order, double midPrice){
     return fv;
 }
 
+void FeatureExtractor::recordCancel(const string& userID) {
+    cancelCount[userID]++;
+}
 
 // First feature :- velocity , count how many orders in last 60 sec
 double FeatureExtractor::calcVelocity(const deque<Order>& orders, long long now)const{
