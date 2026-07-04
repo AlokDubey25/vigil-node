@@ -1,167 +1,265 @@
 # Vigil Node — Architecture
 
-## what it does
+## Overview
 
-real-time pre-trade fraud detection engine. every order that enters
-the marketplace gets validated, scored, and either allowed
-into the book or blocked before execution.
+Vigil Node is a hybrid C++/Python fraud detection engine. The two languages are not interchangeable — they exist for distinct reasons and communicate through a well-defined IPC protocol.
+
+**C++ owns:** order book state, feature extraction, graph analysis, IPC bridge, config, audit writes  
+**Python owns:** ML inference (XGBoost + Random Forest), SHAP explainability, live dashboard reads
+
+The SQLite database is the only shared state between them, accessed safely via WAL mode — writers never block readers.
 
 ---
 
-## layer overview
+## Full data flow
 
-``` architecture
-                    ┌─────────────────────────────┐
-  order in ──────→  │  C++ Engine (main.cpp)       │
-                    │  OrderBook + DatabaseHandler  │
-                    └───────────┬─────────────────-┘
-                                │ feature vector
-                                ↓
-                    ┌─────────────────────────────┐
-                    │  Python ML         │
-                    │  XGBoost + RF ensemble       │
-                    │  scorer.py via stdin/stdout  │
-                    └───────────┬─────────────────-┘
-                                │ fraud score 0.0–1.0
-                                ↓
-                    ┌─────────────────────────────┐
-                    │  SQLite (vigil.db)           │
-                    │  orders, trades, risk_log    │
-                    └─────────────────────────────┘
+``` How model actually works...
+
+Order arrives (interactive menu or run command)
+        │
+        ▼
+saveOrder(PENDING)                      writes to orders table
+        │
+        ▼
+Blacklist check  ─── O(1) unordered_set lookup ─── BLOCKED? ──► REJECT + risk_log
+        │ clear
+        ▼
+Balance check (BUY only)  ──────────────────────── too low? ──► REJECT_FUNDS + risk_log
+        │ sufficient
+        ▼
+FeatureExtractor::extract()
+  rolling 100-order window per user
+  6 features: velocity, priceDeviation, cancelRate,
+              sizeRatio, timeBetween, repeatPriceRate
+        │
+        ├──────────────────────────────────────────────────────────────────────────►
+        │                                                Python process (scorer.py)
+        │  fv.toJSON() ──► pipe (write fd) ──────────►  validate_features()
+        │                                                ensemble_score()
+        │                                                if score > 0.3: explain_text()
+        │  {"score":X,"explanation":"..."} ◄── pipe ──  json.dumps() + flush
+        │◄─────────────────────────────────────────────────────────────────────────
+        │  select() timeout: 100ms
+        │  fallback score: 0.5 if timeout or pipe error
+        │
+        ├── Graph::getNetworkScore(userID)
+        │     degree bonus: +0.1 if degree≥3, +0.2 if degree≥5
+        │     cycle bonus:  +cycle_base_score (default 0.50) if in DFS cycle
+        │     capped at 1.0
+        │
+        ▼
+combined = mlScore × ml_weight + graphScore × graph_weight
+         = mlScore × 0.70     + graphScore × 0.30
+        │
+        ├── combined > fraud_threshold (0.80)?
+        │         YES ──► escalateAction() ──► WARN / TEMP_BLOCK / PERMANENT_BLOCK
+        │                 updateOrderStatus(REJECTED)
+        │                 saveRiskEvent(score, SHAP reason, action)
+        │                 if PERMANENT_BLOCK: blocked.insert(userID)
+        │
+        │         NO  ──► OrderBook::addOrder()
+        │                 updateOrderStatus(PENDING→stays)
+        │
+        ▼
+runMatchLoop()
+  while best_bid >= best_ask:
+    Trade t = matchOrders()
+    saveTrade(t)
+    updateOrderStatus(FILLED)
+    settleTrade(buyer, seller, price×qty)   ── BEGIN/COMMIT/ROLLBACK transaction
+    tradeGraph.addEdge(buyer, seller)
+    if isInCycle(buyer) or isInCycle(seller):
+      getConnectedComponent() ──► saveRiskEvent() for all ring members
+        │
+        ▼
+Dashboard (separate process, separate terminal)
+  polls SQLite every 0.5s via WAL-safe reads
+  redraws only when (max_orderID, max_logID, max_txnID) tuple changes
+  5 panels: Engine Stats, Recent Orders, Risk Log, Trading Network, Money & Orders
 ```
 
 ---
 
-## components built
+## Components
 
-### OrderBook  (cpp/src/orderbook.cpp)
+### L2 Order Book (cpp/src/orderbook.cpp)
 
-- BUY book: std::map>
-- SELL book: std::map
-- keys in paise (price × 100) — exact integer comparison
-- addOrder() validates, returns bool
-- matchOrders() returns Trade struct with filled/partial flags
-- all Catch2 tested in tests/cpp/test_orderbook.cpp
+Two `map` containers with opposite sort orders:
 
-### DatabaseHandler  (cpp/src/database.cpp)
+``` Orderbook
+buyBook_  : map<double, Order, greater<double>>   highest bid first
+sellBook_ : map<double, Order>                          lowest ask first
+```
 
-- opens vigil.db, creates 3 tables if not exist
-- WAL journal mode for concurrent read+write
-- saveOrder(), saveTrade(), saveRiskEvent(), updateOrderStatus()
-- loadBlacklist() — loads PERMANENT_BLOCK users on startup
-- all Catch2 tested in tests/cpp/test_database.cpp using :memory: DB
+Keys are prices in rupees (floating point). One order per exact price level — last writer wins on collision. Matching runs when `bestBid >= bestAsk`. Partial fills supported — the unfilled remainder stays in the book.
+
+### Feature Extractor (cpp/src/feature_extractor.cpp)
+
+Per-user rolling window of the last 100 orders stored in `unordered_map<string, deque<Order>>`. Six features computed at extract time:
+
+| Feature         | Description                            | Cap |
+|-----------------|----------------------------------------|-----|
+| velocity        | orders per minute in window            | 100 |
+| priceDeviation  | distance from mid-price as fraction    | 1.0 |
+| cancelRate      | cancels / window size                  | 1.0 |
+| sizeRatio       | this order qty / mean window qty       | 20  |
+| timeBetween     | seconds since last order (inverted)    | 1.0 |
+| repeatPriceRate | fraction of orders at this exact price | 1.0 |
+
+`isSuspicious()` flags an order if 2+ features exceed their thresholds. `friendlyVerdict()` translates the same thresholds into a human sentence.
+
+### C++↔Python Bridge (cpp/src/bridge.cpp)
+
+``` Bridge
+C++ parent process                Python child process (scorer.py)
+─────────────────                 ──────────────────────────────
+fork()
+  child: dup2 stdin/stdout
+         execl scorer.py
+parent: close unused pipe ends
+        rfd_ = raw read fd        loads XGBoost + RF models
+        wfd_ = write fd           prints {"ready": true}
+waitForReady(5000ms timeout) ◄────────────────────────────
+                                  
+score(featureJSON):
+  writeLine(JSON array)    ──────► validate_features()
+                                   ensemble_score()
+  readLineWithTimeout(100ms)        if score>0.3: explain_text()
+       ◄─────────────────────────  print({"score":X,"explanation":"..."})
+
+select() on rfd_ before every read — never blocks 
+pending_ string buffers partial reads across multiple read() calls
+timeout → FALLBACK_SCORE(0.5), ready_ stays true
+empty response → FALLBACK_SCORE, ready_ = false
+```
+
+### Graph Engine (cpp/src/graph.cpp)
+
+Directed adjacency list: `unordered_map<string, unordered_set<string>>`.
+
+**DFS cycle detection** — depth limited to 3 to avoid full traversal cost on large graphs. Starts from a node, follows outgoing edges, checks if any path returns to the start within 3 hops.
+
+**BFS connected component** — undirected traversal (forward + reverse edges) finds all users reachable from a given node. Used after a cycle is detected to flag the entire ring, not just the two endpoints.
+
+**Network score formula:**
+
+``` Network works -
+score = 0.0
+if inCycle:  score += cycle_base_score   (config, default 0.50)
+if degree≥3: score += 0.1
+if degree≥5: score += 0.2
+score = min(score, 1.0)
+```
+
+### Python ML Ensemble (python/models/)
+
+Training data: 4,000 normal + 400 fraud simulated orders (10:1 imbalance). Both models handle imbalance independently — XGBoost via `scale_pos_weight`, Random Forest via `class_weight="balanced"`. Final score is the mean of both models' fraud probability outputs.
+
+SHAP uses `TreeExplainer` on the XGBoost model only — exact and fast for tree models. Runs only when `score > 0.3` to avoid paying the compute cost on clearly clean orders.
+
+### Dashboard (python/dashboard/)
+
+Reads SQLite in a separate OS process. WAL mode guarantees reads never block the C++ writer. Change detection uses a 3-tuple `(max_orderID, max_logID, max_txnID)` — redraws only when any value changes, not on a fixed timer. Keyboard listener runs in a daemon thread using `termios` raw mode.
 
 ---
 
-## data flow — current state
+## Database schema
 
-``` architecture
-order arrives
-    → saveOrder(status=PENDING)
-    → addOrder() into std::map
-    → matchOrders()
-         ↓ Trade returned
-    → saveTrade()
-    → updateOrderStatus(FILLED) for consumed orders
+```sql
+orders (
+    orderID   INTEGER PRIMARY KEY,
+    userID    TEXT, price REAL, quantity INTEGER, side TEXT,
+    timestamp INTEGER, status TEXT DEFAULT 'PENDING',
+    blockScore REAL DEFAULT 0.0, fraudFlag INTEGER DEFAULT 0
+)
+
+trades (
+    tradeID     INTEGER PRIMARY KEY AUTOINCREMENT,
+    buyOrderID  INTEGER REFERENCES orders(orderID),
+    sellOrderID INTEGER REFERENCES orders(orderID),
+    price REAL, quantity INTEGER, timestamp INTEGER
+)
+
+risk_log (
+    logID      INTEGER PRIMARY KEY AUTOINCREMENT,
+    userID     TEXT, orderID INTEGER REFERENCES orders(orderID),
+    fraudScore REAL, reason TEXT, action TEXT, timestamp INTEGER
+)
+
+accounts (
+    userID  TEXT PRIMARY KEY,
+    balance REAL NOT NULL DEFAULT 0.0
+)
+
+transactions (
+    txnID        INTEGER PRIMARY KEY AUTOINCREMENT,
+    userID       TEXT, type TEXT,
+    amount       REAL, balanceAfter REAL,
+    timestamp    INTEGER, note TEXT
+)
+```
+
+**action values in risk_log:**
+
+| Value           | Meaning                                                                               |
+|-----------------|---------------------------------------------------------------------------------------|
+| WARN            | Flagged 1–2 times — order rejected, no lasting change                                 |
+| TEMP_BLOCK      | Flagged 3–4 times — order rejected                                                    |
+| PERMANENT_BLOCK | Flagged 5+ times — added to in-memory blacklist, all future orders instantly rejected |
+| REJECT          | Already on blacklist — instant reject, no scoring                                     |
+| REJECT_FUNDS    | Insufficient balance for BUY — not a fraud signal                                     |
+
+---
+
+## IPC bridge protocol
+
+``` IPC brige -
+startup:
+  Python → C++:  {"ready": true}
+  timeout: 5000ms (model loading is slow)
+
+per order:
+  C++ → Python:  [vel, pdev, crate, sratio, tbetween, rpprice]
+                 one JSON array, one line, newline-terminated
+  Python → C++:  {"score": 0.0312}
+              or {"score": 0.8450, "explanation": "velocity increased the score (52%)"}
+              or {"error": "velocity outside range [0, 100]"}
+  timeout: 100ms (bridge_timeout_ms in settings.json)
+
+failure handling:
+  timeout          → FALLBACK_SCORE (0.5), ready_ stays true
+  empty response   → FALLBACK_SCORE, ready_ = false
+  {"error": ...}   → FALLBACK_SCORE, logged as warning
+  pipe closed      → FALLBACK_SCORE, ready_ = false
 ```
 
 ---
 
-## key design decisions
+## Config reference
 
-- paise keys: prices stored as long long (× 100) to avoid float comparison bugs
-- RAII: DatabaseHandler opens on construct, closes on destruct automatically
-- WAL mode: allows dashboard to read while engine writes concurrently
-- :memory: tests: test DB never touches disk — fast and clean
-- separation: OrderBook knows nothing about the DB, DB knows nothing about OrderBook
-- stub pattern: methods declared, stubbed, implemented
+`config/settings.json` — all values read at startup, no recompilation needed:
 
----
-
-## file layout
-
-``` architecture
-cpp/include/   ← headers (contracts)
-cpp/src/       ← implementations
-cpp/vendor/    ← sqlite3 amalgamation
-tests/cpp/     ← Catch2 unit tests
-python/utils/  ← config + logging helpers
-docs/          ← this file + schema.md + bridge_contract.md
-```
-
-## components built (Phases 3–8)
-
-### FeatureExtractor  (cpp/src/feature_extractor.cpp)
-
-- rolling 100-order window per user via unordered_map<stringdeque<Order>>
-
-- 6 behavioral features: velocity, priceDeviation, cancelRate,
-  sizeRatio, timeBetween, repeatPriceRate
-- toJSON() for the Python bridge, isSuspicious() rule-based pre-check
-- all features capped to prevent ML outlier distortion
-
-### Python ML ensemble  (python/models/, python/bridge/scorer.py)
-
-- XGBoost + Random Forest, both handling class imbalance independently
-- ensemble_score() averages both models' fraud probability
-- scorer.py: stdin/stdout loop, validates input, never crashes the pipe
-
-### Bridge  (cpp/src/bridge.cpp)
-
-- fork + pipe + dup2 + execl — bidirectional C++↔Python communication
-- handshake protocol (Python sends {"ready":true} before scoring starts)
-- fallback score (0.5) if Python is unavailable — engine never crashes
-
-### Config  (cpp/src/config.cpp)
-
-- pimpl pattern — nlohmann/json.hpp isolated to one .cpp file
-- every threshold, weight, and limit is in config/settings.json
-- no recompilation needed to retune the system
-
-### Graph  (cpp/src/graph.cpp)
-
-- directed adjacency list — buyer → seller edges per trade
-- DFS cycle detection (depth ≤ 3) catches wash trading
-- BFS connected components find entire fraud rings, not just pairs
-- getNetworkScore() feeds into the final combined verdict
-
-### Dashboard  (python/dashboard/)
-
-- db_reader.py: read-only SQLite access, safe alongside the writing engine (WAL mode)
-- dashboard.py: Rich-based 4-panel live terminal UI
-- header bar shows engine online/offline status + current threshold
-- event-driven refresh — redraws only when data changes, not on a blind timer
-
----
-
-## final data flow (Phases 1–8 combined)
-
-``` architecture
-order arrives
-  → saveOrder(PENDING)                      
-  → blacklist check (O(1) unordered_set)    
-  → extract 6 features                       
-  → ML score (XGBoost + RF ensemble)         
-  → graph network score (cycle + degree)     
-  → combined = ml*0.7 + graph*0.3            
-  → verdict vs config threshold              
-       REJECTED → risk_log + escalation
-       ALLOWED  → order book → match engine  
-                → trade saved → graph edge added
-  → dashboard reads live from SQLite         
+```json
+{
+  "fraud_threshold":          0.80,   // combined score above which order is blocked
+  "blacklist_temp_threshold": 3,      // flags before TEMP_BLOCK
+  "blacklist_perm_threshold": 5,      // flags before PERMANENT_BLOCK
+  "ml_weight":                0.70,   // ML contribution to combined score
+  "graph_weight":             0.30,   // graph contribution to combined score
+  "cycle_base_score":         0.50,   // graph score added when user is in a cycle
+  "bridge_timeout_ms":        100     // how long to wait for Python to respond
+}
 ```
 
 ---
 
-## status — all phases complete
+## Known design boundaries
 
-| phase | component           | status |
-|-------|---------------------|--------|
-| 1     | Order book          | ✓ done |
-| 2     | SQLite persistence  | ✓ done |
-| 3     | Feature extractor   | ✓ done |
-| 4     | ML ensemble         | ✓ done |
-| 5     | C++↔Python bridge   | ✓ done |
-| 6     | Blacklist + verdict | ✓ done |
-| 7     | Graph logic         | ✓ done |
-| 8     | CLI dashboard       | ✓ done |
+| Boundary                             | Reason                                                                                   |
+|--------------------------------------|------------------------------------------------------------------------------------------|
+| Buying power not reserved            | Concurrent orders can collectively overspend; full fix needs a reservation system        |
+| SELL not checked for share ownership | No position tracking table; out of scope                                                 |
+| Single-threaded engine               | Shared in-memory state (book, graph, blocked set) was never made thread-safe             |
+| TEMP_BLOCK = WARN in behavior        | Both reject the triggering order only; real session-scoped ban needs time-based tracking |
+| One order per price level            | map key is price; collision = overwrite                                                  |
+| UserID is free text                  | No authentication; trust model is "whoever says they're X is X"                          |
