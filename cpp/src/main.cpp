@@ -14,7 +14,8 @@
 using namespace std;
 
 int  runHistory(int argc, char* argv[]);
-int  runReset();                          
+int  runReset();
+int  runBenchmark(int argc, char* argv[]);                          
 void runInteractive(DatabaseHandler& db,  
                      Bridge& bridge, OrderBook& book,
                      FeatureExtractor& extractor, Graph& tradeGraph,
@@ -57,7 +58,8 @@ void printUsage() {
          << "  interactive   guided menu — buy, sell, deposit, withdraw, and more\n"
          << "  history <uid> last 10 transactions for a user\n"
          << "  reset         wipe vigil.db and start fresh\n"
-         << "  --help        this message\n";   
+         << "  --help        this message\n"  
+         << "  benchmark [--n N]  measure orders/sec at each pipeline stage\n"; 
 }
 
 int main(int argc, char* argv[]){
@@ -66,6 +68,7 @@ int main(int argc, char* argv[]){
 
     string cmd = argv[1];
     if (cmd == "history")     return runHistory(argc, argv);
+    if (cmd == "benchmark") return runBenchmark(argc, argv);
     if (cmd == "reset")       return runReset();      
     if (cmd == "--help")      { printUsage(); return 0; }
     if (cmd != "run" && cmd != "interactive") {
@@ -156,7 +159,7 @@ int main(int argc, char* argv[]){
     cancelOrderByID(32, book, db, extractor, orderUsers);
     insert(makeOrder(33, "I3001", 97.50, 5, "BUY"));    
 
-    
+
     // ── wash trading demo — prices far from the normal range so wash
     // traders match EACH OTHER, not the existing cheaper sells      ──    
     cout << "\n==== wash trading demo ====\n";
@@ -185,6 +188,95 @@ int runReset() {
             cout << Color::green("[RESET] removed " + string(f)) << "\n";
     }
     cout << "done — run './build/vigil run' to start fresh.\n";
+    return 0;
+}
+
+int runBenchmark(int argc, char* argv[]) {
+    int N = 5000;
+    for (int i = 2; i < argc; i++) {
+        string arg = argv[i];
+        if (arg == "--n" && i + 1 < argc) N = stoi(argv[++i]);
+    }
+    cout << Color::cyan("=== Vigil Node Benchmark — N=" + to_string(N) + " ===") << "\n\n";
+
+    auto gen = [](int n) {
+        vector<Order> v; v.reserve(n);
+        for (int i = 0; i < n; i++)
+            v.push_back(makeOrder(i + 1,
+                "BENCH" + to_string(i % 20),
+                100.0 + (i % 50) * 0.05, 1,
+                i % 2 == 0 ? "BUY" : "SELL"));
+        return v;
+    };
+
+    auto measure = [](const string& label, int n, double secs) {
+        cout << left << setw(38) << label
+             << fixed << setprecision(0) << (n / secs)
+             << " orders/sec  (" << setprecision(1) << secs * 1000 << " ms)\n";
+    };
+
+    // stage 1 — order book only
+    { auto orders = gen(N); OrderBook book;
+      auto t0 = chrono::steady_clock::now();
+      for (auto& o : orders) {
+          book.addOrder(o);
+          if (book.hasBuys() && book.hasSells() &&
+              book.getBestBid() >= book.getBestAsk()) book.matchOrders();
+      }
+      measure("stage 1 — order book only:", N,
+              chrono::duration<double>(chrono::steady_clock::now()-t0).count()); }
+
+    // stage 2 — + SQLite
+    { remove("benchmark.db");
+      auto orders = gen(N); OrderBook book; DatabaseHandler db("benchmark.db");
+      auto t0 = chrono::steady_clock::now();
+      for (auto& o : orders) {
+          db.saveOrder(o); book.addOrder(o);
+          if (book.hasBuys() && book.hasSells() &&
+              book.getBestBid() >= book.getBestAsk())
+              { Trade t = book.matchOrders(); if(t.quantity) db.saveTrade(t); }
+      }
+      measure("stage 2 — + SQLite persistence:", N,
+              chrono::duration<double>(chrono::steady_clock::now()-t0).count());
+      remove("benchmark.db"); remove("benchmark.db-wal"); remove("benchmark.db-shm"); }
+
+    // stage 3 — + feature extraction
+    { auto orders = gen(N); OrderBook book; FeatureExtractor ex;
+      auto t0 = chrono::steady_clock::now();
+      for (auto& o : orders) {
+          double mid = (book.hasBuys() && book.hasSells())
+              ? (book.getBestBidPrice() + book.getBestAskPrice()) / 2.0 : 0.0;
+          ex.extract(o, mid); book.addOrder(o);
+          if (book.hasBuys() && book.hasSells() &&
+              book.getBestBid() >= book.getBestAsk()) book.matchOrders();
+      }
+      measure("stage 3 — + feature extraction:", N,
+              chrono::duration<double>(chrono::steady_clock::now()-t0).count()); }
+
+    // stage 4 — + ML bridge (smaller N — bridge is slow)
+    { int BN = min(N, 500); auto orders = gen(BN);
+      OrderBook book; FeatureExtractor ex;
+      Config cfg("config/settings.json");
+      Bridge bridge("python3 python/bridge/scorer.py",
+                    cfg.getInt("bridge_timeout_ms", 100));
+      if (!bridge.isReady()) {
+          cout << Color::yellow("stage 4 — skipped (bridge not ready)\n");
+      } else {
+          auto t0 = chrono::steady_clock::now();
+          for (auto& o : orders) {
+              double mid = (book.hasBuys() && book.hasSells())
+                  ? (book.getBestBidPrice() + book.getBestAskPrice()) / 2.0 : 0.0;
+              FeatureVector fv = ex.extract(o, mid);
+              bridge.score(fv.toJSON());
+              book.addOrder(o);
+              if (book.hasBuys() && book.hasSells() &&
+                  book.getBestBid() >= book.getBestAsk()) book.matchOrders();
+          }
+          measure("stage 4 — + ML bridge (N=" + to_string(BN) + "):", BN,
+                  chrono::duration<double>(chrono::steady_clock::now()-t0).count());
+      }
+    }
+    cout << Color::dim("\nbottleneck is always the bridge — one IPC round-trip per order\n");
     return 0;
 }
 
