@@ -42,6 +42,10 @@ void runMatchLoop(OrderBook& book, DatabaseHandler& db,
                    Graph& tradeGraph,
                    unordered_map<int, string>& orderUsers);
 
+bool cancelOrderByID(int orderID, OrderBook& book, DatabaseHandler& db,
+                      FeatureExtractor& extractor,
+                      unordered_map<int, string>& orderUsers);
+
 void printUsage() {
     cout << "Usage: ./build/vigil <command> [args]\n"
          << "Commands:\n"
@@ -317,6 +321,23 @@ void runMatchLoop(OrderBook& book, DatabaseHandler& db,
             }
         }
     }
+}
+
+bool cancelOrderByID(int orderID, OrderBook& book, DatabaseHandler& db,
+                      FeatureExtractor& extractor,
+                      unordered_map<int, string>& orderUsers)
+{
+    if (!book.cancelOrder(orderID)) {
+        cout << Color::yellow("[CANCEL] order " + to_string(orderID)
+                              + " not found — already filled, rejected, or bad ID") << "\n";
+        return false;
+    }
+    string userID = orderUsers.count(orderID) ? orderUsers[orderID] : "?";
+    db.updateOrderStatus(orderID, "CANCELLED");
+    extractor.recordCancel(userID);   ← this is where cancelRate gets real data
+    cout << Color::cyan("[CANCEL] order " + to_string(orderID)
+                        + " cancelled — " + userID + "'s cancel count updated") << "\n";
+    return true;
 }
 
 int runHistory(int argc, char* argv[]) {
