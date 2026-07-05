@@ -23,3 +23,5 @@ pytest==8.1.1
 
 # Plots - for model evalutaion
 matplotlib==3.10.0
+
+shap==0.45.0

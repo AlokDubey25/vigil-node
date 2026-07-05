@@ -1,4 +1,5 @@
 # include "../include/bridge.h"
+#include "../vendor/nlohmann/json.hpp"
 # include <iostream>
 # include <cstring>
 # include <cerrno>
@@ -7,6 +8,7 @@
 # include <sys/select.h>
 # include <algorithm>
 using namespace std;
+using json = nlohmann::json;
 
 Bridge::Bridge(const string& command, int timeoutMs)
     : timeoutMs_(timeoutMs > 0 ? timeoutMs : 100)
@@ -119,36 +121,36 @@ string Bridge::readLine(){
     return s;
 }
 
-double Bridge::score(const string& featureJSON){
+double Bridge::score(const string& featureJSON) {
     if (!ready_) return FALLBACK_SCORE;
+    lastExplanation_.clear();
 
-    if (!writeLine(featureJSON)){
-        cerr<< "[BRIDGE] write failed - fallback\n";
-        ready_ = false;
-        return FALLBACK_SCORE;
+    if (!writeLine(featureJSON)) {
+        cerr << "[BRIDGE] write failed\n";
+        ready_ = false; return FALLBACK_SCORE;
     }
 
-    string resp = readLine();
-    if (resp.empty()){
-        cerr<< "[BRIDGE] empty response - fallback\n";
-        ready_ = false;
-        return FALLBACK_SCORE;
+    auto [ok, resp] = readLineWithTimeout(timeoutMs_);
+    if (!ok) {
+        cerr << "[BRIDGE] timeout after " << timeoutMs_ << "ms\n";
+        return FALLBACK_SCORE;   ← ready_ stays true — one slow call ≠ dead bridge
     }
-
-    // parse {score : 0.xxxx} - find number after score:
-    auto pos = resp.find("\"score\"");
-    if (pos == string::npos){
-        cerr<<"[BRIDGE] no score in: " << resp << "\n";
-        return FALLBACK_SCORE;
-    }
-    auto colon = resp.find(':', pos);
-    if (colon == string::npos) return FALLBACK_SCORE;
+    
+    if (resp.empty()) { ready_ = false; return FALLBACK_SCORE; }
 
     try {
-        double s = stod(resp.substr(colon +1));
-        return max(0.0, min(1.0, s));   // clamp to [0,1]
+        json j = json::parse(resp);
+        if (j.contains("error")) {
+            cerr << "[BRIDGE] python error: " << j.value("error","?") << "\n";
+            return FALLBACK_SCORE;
+        }
+        if (!j.contains("score")) { return FALLBACK_SCORE; }
+        if (j.contains("explanation"))
+            lastExplanation_ = j["explanation"].get<string>();
+        double s = j["score"].get<double>();
+        return max(0.0, min(1.0, s));
     } catch (...) {
-        cerr<< "[BRIDGE] parse failed: "<< resp << "\n";
+        cerr << "[BRIDGE] JSON parse failed: " << resp << "\n";
         return FALLBACK_SCORE;
     }
 }

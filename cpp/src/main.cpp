@@ -353,12 +353,17 @@ void processOrder(const Order& o,
     fv.print(o.userID);
 
     double mlScore    = bridge.score(fv.toJSON());
+    string explanation = bridge.getLastExplanation(); 
     double graphScore = tradeGraph.getNetworkScore(o.userID);
     double combined   = (mlScore * ML_WEIGHT) + (graphScore * GRAPH_WEIGHT);
 
     cout << "       [ML]    score=" << fixed << setprecision(4) << mlScore << "\n"
          << "       [GRAPH] score=" << graphScore << "\n"
          << "       [FINAL] score=" << combined   << "\n";
+    
+    if (!explanation.empty())
+        cout << Color::dim("       [WHY]   " + explanation) << "\n";
+
 
     // 3. Plain-English Main Verdict Sentence (Console-only UX layer)
     string friendly = friendlyVerdict(fv, combined, THRESHOLD);
@@ -371,8 +376,10 @@ void processOrder(const Order& o,
                           + " combined=" + to_string(combined)
                           + " action="   + action) << "\n";
         db.updateOrderStatus(o.orderID, "REJECTED");
-        db.saveRiskEvent(o.userID, o.orderID, combined,
-                         "combined ML+graph score", action);
+
+        string reason = explanation.empty() ? "combined ML+graph score" : explanation;
+        db.saveRiskEvent(o.userID, o.orderID, combined, reason, action);
+
         if (action == "PERMANENT_BLOCK") blocked.insert(o.userID);
         return;
     }
