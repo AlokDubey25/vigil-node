@@ -76,13 +76,13 @@ int main(int argc, char* argv[]){
         cerr<< "[WARN] using hardcoded defaults\n";
 
     // read all thresholds along with others from config with safe fallbacks
-    const double THRESHOLD    = cfg.getDouble("fraud_threshold",       0.80);
-    const int    TEMP_AT      = cfg.getInt   ("blacklist_temp_threshold", 3);
-    const int    PERM_AT      = cfg.getInt   ("blacklist_perm_threshold", 5);
-    const double ML_WEIGHT    = cfg.getDouble("ml_weight",             0.70);
-    const double GRAPH_WEIGHT = cfg.getDouble("graph_weight",          0.30);
-    const double CYCLE_BASE   = cfg.getDouble("cycle_base_score",      0.50);
-
+    const double THRESHOLD      = cfg.getDouble("fraud_threshold",       0.80);
+    const int    TEMP_AT        = cfg.getInt   ("blacklist_temp_threshold", 3);
+    const int    PERM_AT        = cfg.getInt   ("blacklist_perm_threshold", 5);
+    const double ML_WEIGHT      = cfg.getDouble("ml_weight",             0.70);
+    const double GRAPH_WEIGHT   = cfg.getDouble("graph_weight",          0.30);
+    const double CYCLE_BASE     = cfg.getDouble("cycle_base_score",      0.50);
+    const int    BRIDGE_TIMEOUT = cfg.getInt("bridge_timeout_ms", 100);
 
     cout<< Color::dim("[CONFIG] threshold=" + to_string(THRESHOLD)
                       + "  temp_at=" + to_string(TEMP_AT)
@@ -103,7 +103,7 @@ int main(int argc, char* argv[]){
 
     // 03 :- Python bridge which is added now - it launched once, stays runnig
     // run ./vigil from project root so the path resolves correctly
-    Bridge bridge("python3 python/bridge/scorer.py");
+    Bridge bridge("python3 python/bridge/scorer.py", BRIDGE_TIMEOUT);
     if (!bridge.isReady()){
         cerr<< Color::yellow("[WARN] Bridge not ready - using fallback score") << "\n";
     }
@@ -334,7 +334,7 @@ bool cancelOrderByID(int orderID, OrderBook& book, DatabaseHandler& db,
     }
     string userID = orderUsers.count(orderID) ? orderUsers[orderID] : "?";
     db.updateOrderStatus(orderID, "CANCELLED");
-    extractor.recordCancel(userID);   ← this is where cancelRate gets real data
+    extractor.recordCancel(userID);  
     cout << Color::cyan("[CANCEL] order " + to_string(orderID)
                         + " cancelled — " + userID + "'s cancel count updated") << "\n";
     return true;
