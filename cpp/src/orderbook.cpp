@@ -139,3 +139,15 @@ Trade OrderBook::matchOrders(){
     return t;  // here t qty > 0 tells caller a trade happend
 
 }
+
+bool OrderBook::cancelOrder(int orderID) {
+    for (auto it = buyBook_.begin(); it != buyBook_.end(); ++it) {
+        if (it->second.orderID == orderID)
+            { buyBook_.erase(it); return true; }
+    }
+    for (auto it = sellBook_.begin(); it != sellBook_.end(); ++it) {
+        if (it->second.orderID == orderID)
+            { sellBook_.erase(it); return true; }
+    }
+    return false;
+}

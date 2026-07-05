@@ -26,6 +26,9 @@ public:
     bool hasBuys() const;
     bool hasSells() const;
 
+    //  if cancelRate wiring    
+    bool cancelOrder(int orderID);
+
 private:
     // Buying at highest and Selling at lowest
     std::map<long long, Order,
