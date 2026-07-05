@@ -9,7 +9,7 @@ class Bridge{
 public:
     // command = "python3 python/bridge/scorer.py"
     // run ./vigil from root so relative path works
-    explicit Bridge(const string& command);
+    explicit Bridge(const string& command, int timeoutMs = 100);
     ~Bridge();
 
     // true after python sends {ready : true}
@@ -28,6 +28,7 @@ private:
     int   wfd_    = -1;      // write fd -> Python stdin
     FILE* reader_ = nullptr;// read FILE <- Python stdout
     bool  ready_  = false;
+    int   timeoutMs_ = 100;
 
     bool   waitForReady();
     bool   writeLine(const string& line);

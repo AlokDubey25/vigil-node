@@ -4,9 +4,13 @@
 # include <cerrno>
 # include <csignal>
 # include <sys/wait.h>
+# include <sys/select.h>
+# include <algorithm>
 using namespace std;
 
-Bridge::Bridge(const string& command){
+Bridge::Bridge(const string& command, int timeoutMs)
+    : timeoutMs_(timeoutMs > 0 ? timeoutMs : 100)
+{
     // two pipes: in = Cpp -> Python , out = Python -> Cpp
     int in_pipe[2], out_pipe[2];
 
@@ -91,6 +95,21 @@ bool Bridge::writeLine(const string& line){
 
 string Bridge::readLine(){
     if (!reader_) return "";
+
+    int fd = fileno(reader_);
+    if (fd < 0) return "";
+
+    fd_set set;
+    FD_ZERO(&set);
+    FD_SET(fd, &set);
+
+    timeval timeout{};
+    timeout.tv_sec  = timeoutMs_ / 1000;
+    timeout.tv_usec = (timeoutMs_ % 1000) * 1000;
+
+    int rc = select(fd + 1, &set, nullptr, nullptr, &timeout);
+    if (rc <= 0) return "";
+
     char buf[1024];
     if (!fgets(buf, sizeof(buf), reader_)) return "";
     string s(buf);

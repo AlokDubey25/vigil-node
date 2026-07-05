@@ -2,6 +2,10 @@
 # include <iomanip>
 # include <ctime>
 # include <unordered_set>
+# include <algorithm>
+# include <chrono>
+# include <cstdio>
+# include <vector>
 # include "../include/order.h"
 # include "../include/orderbook.h"
 # include "../include/trade.h"
@@ -47,10 +51,6 @@ bool cancelOrderByID(int orderID, OrderBook& book, DatabaseHandler& db,
                       FeatureExtractor& extractor,
                       unordered_map<int, string>& orderUsers);
 
-string friendlyVerdict(const FeatureVector& fv, double score, double threshold) {
-    if (score > threshold) return "Risk limits exceeded. Transaction flagged for review.";
-    return "Transaction profile matches nominal historical patterns.";
-}
 void printUsage() {
     cout << "Usage: ./build/vigil <command> [args]\n"
          << "Commands:\n"
