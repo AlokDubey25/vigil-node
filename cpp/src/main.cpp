@@ -46,6 +46,10 @@ bool cancelOrderByID(int orderID, OrderBook& book, DatabaseHandler& db,
                       FeatureExtractor& extractor,
                       unordered_map<int, string>& orderUsers);
 
+string friendlyVerdict(const FeatureVector& fv, double score, double threshold) {
+    if (score > threshold) return "Risk limits exceeded. Transaction flagged for review.";
+    return "Transaction profile matches nominal historical patterns.";
+}
 void printUsage() {
     cout << "Usage: ./build/vigil <command> [args]\n"
          << "Commands:\n"
@@ -94,7 +98,7 @@ int main(int argc, char* argv[]){
     DatabaseHandler db("vigil.db");
     if (!db.isOpen()) {return 1; }
     
-    // oad previously blocked users into unordered_set for O(1)
+    // load previously blocked users into unordered_set for O(1)
     auto blacklist = db.loadBlacklist();
     unordered_set<string> blocked(blacklist.begin(), blacklist.end());
     cout<< "[ENIGINE]" << blocked.size() << " users on permanent blacklist\n";
@@ -144,6 +148,15 @@ int main(int argc, char* argv[]){
     cout << "\n==== matching normal orders ====\n";
     runMatchLoop(book, db, tradeGraph, orderUsers);
 
+    cout << "\n==== cancellation demo (drives cancelRate) ====\n";
+    insert(makeOrder(30, "I3001", 99.00, 5, "BUY"));
+    insert(makeOrder(31, "I3001", 98.50, 5, "BUY"));
+    insert(makeOrder(32, "I3001", 98.00, 5, "BUY"));
+    cancelOrderByID(31, book, db, extractor, orderUsers);
+    cancelOrderByID(32, book, db, extractor, orderUsers);
+    insert(makeOrder(33, "I3001", 97.50, 5, "BUY"));    
+
+    
     // ── wash trading demo — prices far from the normal range so wash
     // traders match EACH OTHER, not the existing cheaper sells      ──    
     cout << "\n==== wash trading demo ====\n";
