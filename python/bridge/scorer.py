@@ -7,6 +7,7 @@ sys.path.insert(0, ROOT)
 from python.models.ensemble import ensemble_score, load_models
 from python.utils.validators import validate_features
 from python.utils.logger import get_logger
+from python.models.explain import explain_text
 
 log = get_logger("scorer")
 
@@ -55,13 +56,14 @@ def main():
                 continue
 
             # score and reply
-            try:
-                score = ensemble_score(features)
-                log.debug(f"score={score:.4f} features={features}")
-                write({"score": score})
-            except Exception as e:
-                log.error(f"Scoring error: {e}")
-                write({"error": str(e)})
+            s = ensemble_score(features)
+            payload = {"score": s}
+            if s > 0.3:
+                try:
+                    payload["explanation"] = explain_text(features)
+                except Exception as e:
+                    log.warning(f"explain failed: {e}")
+            write(payload)
                 
     except (BrokenPipeError, EOFError):
         log.info("Pipe closed by Cpp - existing")
