@@ -22,6 +22,7 @@ public:
     // used when python is unavailable
     static constexpr double FALLBACK_SCORE = 0.5;
 
+    string getLastExplanation() const { return lastExplanation_; }
     
 private:
     pid_t pid_    = -1;       // Python process ID
@@ -33,5 +34,6 @@ private:
     bool   waitForReady();
     bool   writeLine(const string& line);
     string readLine();
-    
+    string lastExplanation_;
+
 };
