@@ -80,6 +80,13 @@ add_executable(test_graph
 )
 target_include_directories(test_graph PRIVATE cpp/include tests/cpp)
 
+# Test bridge
+add_executable(test_bridge
+    tests/cpp/test_bridge.cpp
+    cpp/src/bridge.cpp
+)
+target_include_directories(test_bridge PRIVATE cpp/include tests/cpp)
+
 # 4. CTest integration to model
 enable_testing()
 add_test(NAME orderbook_tests COMMAND test_orderbook)
@@ -87,4 +94,4 @@ add_test(NAME database_tests  COMMAND test_database)
 add_test(NAME feature_tests   COMMAND test_features) 
 add_test(NAME config_tests    COMMAND test_config)
 add_test(NAME graph_tests     COMMAND test_graph)
-    
+add_test(NAME bridge_tests COMMAND test_bridge)
