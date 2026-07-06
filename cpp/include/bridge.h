@@ -36,4 +36,5 @@ private:
     bool   writeLine(const string& line);
     pair<bool, string> readLineWithTimeout(int timeoutMs);
 
+    string lastExplanation_;
 };
