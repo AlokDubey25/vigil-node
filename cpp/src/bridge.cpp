@@ -7,6 +7,7 @@
 # include <sys/wait.h>
 # include <sys/select.h>
 # include <algorithm>
+# include <unistd.h>
 using namespace std;
 using json = nlohmann::json;
 
@@ -26,13 +27,15 @@ Bridge::Bridge(const string& command, int timeoutMs)
     pid_ = fork();
 
     if (pid_ == 0){
+        setpgid(0, 0);
+
         // child: becomes the py process
         dup2(in_pipe[0],  STDIN_FILENO);    // read from parent's write end
         dup2(out_pipe[1], STDOUT_FILENO);  // write to parent's read end
 
         close(in_pipe[1]); close(out_pipe[0]);
         close(in_pipe[0]); close(out_pipe[1]);
-        
+
         // launch py via shell so PATH is resolved
         execl("/bin/sh", "sh", "-c", command.c_str(), nullptr);
 
@@ -75,16 +78,20 @@ Bridge::~Bridge(){
     if (wfd_ >= 0) close(wfd_);
     if (reader_)   fclose(reader_);
     if (pid_ > 0){
-        kill(pid_, SIGTERM);
+        kill(-pid_, SIGTERM);
+        for (int i = 0; i < 20; i++) {
+            if (waitpid(pid_, nullptr, WNOHANG) == pid_) return;
+            usleep(10000);
+        }
+        kill(-pid_, SIGKILL);
         waitpid(pid_, nullptr, 0);
     }
 }
 
 // wait for {ready : true} from py
 bool Bridge::waitForReady(){
-    char buf[256];
-    if (!fgets(buf, sizeof(buf), reader_)) return false;
-    string line(buf);
+    auto [ok, line] = readLineWithTimeout(5000);
+    if (!ok) return false;
     return line.find("ready") != string::npos;
 }
 
@@ -95,30 +102,30 @@ bool Bridge::writeLine(const string& line){
     return n == static_cast<ssize_t>(data.size());
 }
 
-string Bridge::readLine(){
-    if (!reader_) return "";
+pair<bool, string> Bridge::readLineWithTimeout(int timeoutMs){
+    if (!reader_) return {false, ""};
 
     int fd = fileno(reader_);
-    if (fd < 0) return "";
+    if (fd < 0) return {false, ""};
 
     fd_set set;
     FD_ZERO(&set);
     FD_SET(fd, &set);
 
     timeval timeout{};
-    timeout.tv_sec  = timeoutMs_ / 1000;
-    timeout.tv_usec = (timeoutMs_ % 1000) * 1000;
+    timeout.tv_sec  = timeoutMs / 1000;
+    timeout.tv_usec = (timeoutMs % 1000) * 1000;
 
     int rc = select(fd + 1, &set, nullptr, nullptr, &timeout);
-    if (rc <= 0) return "";
+    if (rc <= 0) return {false, ""};
 
     char buf[1024];
-    if (!fgets(buf, sizeof(buf), reader_)) return "";
+    if (!fgets(buf, sizeof(buf), reader_)) return {false, ""};
     string s(buf);
 
     if (!s.empty() && s.back() == '\n') s.pop_back();
     if (!s.empty() && s.back() == '\r') s.pop_back();
-    return s;
+    return {true, s};
 }
 
 double Bridge::score(const string& featureJSON) {
@@ -130,8 +137,8 @@ double Bridge::score(const string& featureJSON) {
         ready_ = false; return FALLBACK_SCORE;
     }
 
-    string resp = readLine();
-    if (resp.empty()) {
+    auto [ok, resp] = readLineWithTimeout(timeoutMs_);
+    if (!ok || resp.empty()) {
         cerr << "[BRIDGE] empty response or timeout after " << timeoutMs_ << "ms\n";
         // Keep the bridge available for the next order; one slow call is not fatal.
         return FALLBACK_SCORE;
