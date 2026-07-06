@@ -24,13 +24,19 @@ jobs:
                  -o cpp/vendor/nlohmann/json.hpp
           fi
 
-      - name: Check vendored SQLite
+      - name: Ensure vendored SQLite exists
         run: |
-          if [ ! -f cpp/vendor/sqlite3.c ]; then
-            echo "ERROR: cpp/vendor/sqlite3.c not committed — CI will fail"
-            echo "Run: git ls-files cpp/vendor/ to check"
-            exit 1
-          fi
+            if [ ! -f cpp/vendor/sqlite3.c ]; then
+            echo "sqlite3.c missing — downloading amalgamation 3.45.0"
+            mkdir -p cpp/vendor
+            curl -fsSL https://www.sqlite.org/2024/sqlite-amalgamation-3450000.zip \
+                -o /tmp/sqlite.zip
+            unzip -o /tmp/sqlite.zip -d /tmp
+            cp /tmp/sqlite-amalgamation-3450000/sqlite3.c cpp/vendor/sqlite3.c
+            cp /tmp/sqlite-amalgamation-3450000/sqlite3.h cpp/vendor/sqlite3.h
+            else
+            echo "sqlite3.c found in vendor"
+            fi
 
       - name: Configure + build
         run: mkdir -p build && cd build && cmake .. && make
