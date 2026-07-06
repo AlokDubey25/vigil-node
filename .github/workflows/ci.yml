@@ -1,0 +1,61 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  cpp:
+    name: C++ build + tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install build tools
+        run: sudo apt-get update && sudo apt-get install -y build-essential cmake
+
+      - name: Ensure nlohmann/json exists
+        run: |
+          mkdir -p cpp/vendor/nlohmann
+          if [ ! -f cpp/vendor/nlohmann/json.hpp ]; then
+            curl -L https://github.com/nlohmann/json/releases/download/v3.11.3/json.hpp \
+                 -o cpp/vendor/nlohmann/json.hpp
+          fi
+
+      - name: Check vendored SQLite
+        run: |
+          if [ ! -f cpp/vendor/sqlite3.c ]; then
+            echo "ERROR: cpp/vendor/sqlite3.c not committed — CI will fail"
+            echo "Run: git ls-files cpp/vendor/ to check"
+            exit 1
+          fi
+
+      - name: Configure + build
+        run: mkdir -p build && cd build && cmake .. && make
+
+      - name: Test
+        run: cd build && ctest --output-on-failure
+
+  python:
+    name: Python tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install -r python/requirements.txt
+
+      - name: Generate training data + train models
+        run: |
+          python data/training_data/simulate_data.py
+          python python/models/train_xgb.py
+          python python/models/train_rf.py
+
+      - name: Run tests
+        run: pytest tests/python/ -v
