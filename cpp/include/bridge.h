@@ -28,7 +28,7 @@ private:
     pid_t pid_    = -1;        // Python process ID
     int   wfd_    = -1;       // write fd -> Python stdin
     int    rfd_   = -1;      // raw read fd ← Python stdout
-    FILE* reader_ = nullptr;// read FILE <- Python stdout
+    string pending_;        // buffered bytes read from Python stdout
     bool  ready_  = false;
     int   timeoutMs_ = 100;
 

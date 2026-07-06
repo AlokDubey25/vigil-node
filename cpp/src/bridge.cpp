@@ -69,7 +69,7 @@ Bridge::Bridge(const string& command, int timeoutMs)
 
 Bridge::~Bridge(){
     if (wfd_ >= 0) close(wfd_);
-    if (rfd_)   fclose(rfd_);
+    if (rfd_ >= 0) close(rfd_);
     if (pid_ > 0){
         kill(-pid_, SIGTERM);
         for (int i = 0; i < 20; i++) {
