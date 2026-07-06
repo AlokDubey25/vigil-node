@@ -114,3 +114,16 @@ TEST_CASE("empty book edge cases"){
     }
 }
 
+TEST_CASE("cancelOrder removes a pending order") {
+    OrderBook book;
+    Order o1; o1.orderID=1; o1.userID="U1"; o1.price=100.0;
+    o1.quantity=10; o1.side="BUY"; o1.timestamp=1700000000LL;
+    book.addOrder(o1);
+
+    SECTION("returns true for existing order")  { REQUIRE(book.cancelOrder(1) == true); }
+    SECTION("returns false for non-existent ID") { REQUIRE(book.cancelOrder(9999) == false); }
+    SECTION("book is empty after cancel") {
+        book.cancelOrder(1);
+        REQUIRE(book.hasBuys() == false);
+    }
+}
