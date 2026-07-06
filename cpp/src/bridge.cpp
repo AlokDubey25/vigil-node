@@ -130,13 +130,12 @@ double Bridge::score(const string& featureJSON) {
         ready_ = false; return FALLBACK_SCORE;
     }
 
-    auto [ok, resp] = readLineWithTimeout(timeoutMs_);
-    if (!ok) {
-        cerr << "[BRIDGE] timeout after " << timeoutMs_ << "ms\n";
-        return FALLBACK_SCORE;   ← ready_ stays true — one slow call ≠ dead bridge
+    string resp = readLine();
+    if (resp.empty()) {
+        cerr << "[BRIDGE] empty response or timeout after " << timeoutMs_ << "ms\n";
+        // Keep the bridge available for the next order; one slow call is not fatal.
+        return FALLBACK_SCORE;
     }
-    
-    if (resp.empty()) { ready_ = false; return FALLBACK_SCORE; }
 
     try {
         json j = json::parse(resp);
