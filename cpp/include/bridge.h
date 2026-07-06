@@ -1,6 +1,5 @@
 # pragma once
 # include <string>
-# include <cstdio>
 # include <utility>
 # include <unistd.h>
 # include <sys/types.h>
@@ -26,8 +25,9 @@ public:
     string getLastExplanation() const { return lastExplanation_; }
 
 private:
-    pid_t pid_    = -1;       // Python process ID
-    int   wfd_    = -1;      // write fd -> Python stdin
+    pid_t pid_    = -1;        // Python process ID
+    int   wfd_    = -1;       // write fd -> Python stdin
+    int    rfd_   = -1;      // raw read fd ← Python stdout
     FILE* reader_ = nullptr;// read FILE <- Python stdout
     bool  ready_  = false;
     int   timeoutMs_ = 100;
@@ -35,6 +35,5 @@ private:
     bool   waitForReady();
     bool   writeLine(const string& line);
     pair<bool, string> readLineWithTimeout(int timeoutMs);
-    string lastExplanation_;
 
 };

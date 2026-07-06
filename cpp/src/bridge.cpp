@@ -7,7 +7,6 @@
 # include <sys/wait.h>
 # include <sys/select.h>
 # include <algorithm>
-# include <unistd.h>
 using namespace std;
 using json = nlohmann::json;
 
@@ -58,15 +57,9 @@ Bridge::Bridge(const string& command, int timeoutMs)
     close(in_pipe[0]);  // child reads this end
     close(out_pipe[1]);// choild writes this end
 
-    wfd_    = in_pipe[1];                // we write here -> python stdin
-    reader_ = fdopen(out_pipe[0], "r"); // we read here <- python stdout
-
-    if (!reader_){
-        cerr<<  "[BRIDGE] fdopen failed\n";
-        close(wfd_);
-        return;
-    }
-
+    wfd_ = in_pipe[1];                 // we write here -> python stdin
+    rfd_ = out_pipe[0];               // raw fd — no fdopen, no FILE* buffer
+    
     ready_ = waitForReady();
     if (ready_)
         cout<< "[BRIDGE] python scorer is ready\n";
@@ -76,7 +69,7 @@ Bridge::Bridge(const string& command, int timeoutMs)
 
 Bridge::~Bridge(){
     if (wfd_ >= 0) close(wfd_);
-    if (reader_)   fclose(reader_);
+    if (rfd_)   fclose(rfd_);
     if (pid_ > 0){
         kill(-pid_, SIGTERM);
         for (int i = 0; i < 20; i++) {
@@ -102,30 +95,26 @@ bool Bridge::writeLine(const string& line){
     return n == static_cast<ssize_t>(data.size());
 }
 
-pair<bool, string> Bridge::readLineWithTimeout(int timeoutMs){
-    if (!reader_) return {false, ""};
-
-    int fd = fileno(reader_);
-    if (fd < 0) return {false, ""};
-
-    fd_set set;
-    FD_ZERO(&set);
-    FD_SET(fd, &set);
-
-    timeval timeout{};
-    timeout.tv_sec  = timeoutMs / 1000;
-    timeout.tv_usec = (timeoutMs % 1000) * 1000;
-
-    int rc = select(fd + 1, &set, nullptr, nullptr, &timeout);
-    if (rc <= 0) return {false, ""};
-
-    char buf[1024];
-    if (!fgets(buf, sizeof(buf), reader_)) return {false, ""};
-    string s(buf);
-
-    if (!s.empty() && s.back() == '\n') s.pop_back();
-    if (!s.empty() && s.back() == '\r') s.pop_back();
-    return {true, s};
+pair<bool, string> Bridge::readLineWithTimeout(int timeoutMs) {
+    while (pending_.find('\n') == string::npos) {
+        fd_set set;
+        FD_ZERO(&set);
+        FD_SET(rfd_, &set);
+        timeval tv;
+        tv.tv_sec  = timeoutMs / 1000;
+        tv.tv_usec = (timeoutMs % 1000) * 1000;
+        int rc = select(rfd_ + 1, &set, nullptr, nullptr, &tv);
+        if (rc <= 0) return {false, ""};   // timeout or error
+        char buf[1024];
+        ssize_t n = read(rfd_, buf, sizeof(buf));
+        if (n <= 0) return {false, ""};    // EOF or read error
+        pending_.append(buf, n);
+    }
+    auto nl = pending_.find('\n');
+    string line = pending_.substr(0, nl);
+    pending_.erase(0, nl + 1);
+    if (!line.empty() && line.back() == '\r') line.pop_back();
+    return {true, line};
 }
 
 double Bridge::score(const string& featureJSON) {
