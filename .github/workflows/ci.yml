@@ -26,18 +26,18 @@ jobs:
 
       - name: Ensure vendored SQLite exists
         run: |
-            mkdir -p cpp/vendor
-            if [ ! -f cpp/vendor/sqlite3.c ]; then
+          mkdir -p cpp/vendor
+          if [ ! -f cpp/vendor/sqlite3.c ]; then
             echo "Downloading sqlite amalgamation to cpp/vendor/sqlite3.c"
             curl -L -o /tmp/sqlite.zip "https://www.sqlite.org/2023/sqlite-amalgamation-3410200.zip"
             unzip -p /tmp/sqlite.zip sqlite-amalgamation-3410200/sqlite3.c > cpp/vendor/sqlite3.c
-            fi
+          fi
 
-            - name: Configure + build
-                run: mkdir -p build && cd build && cmake .. && make
+      - name: Configure + build
+        run: mkdir -p build && cd build && cmake .. && make
 
-            - name: Test
-                run: cd build && ctest --output-on-failure
+      - name: Test
+        run: cd build && ctest --output-on-failure  
 
   python:
     name: Python tests
