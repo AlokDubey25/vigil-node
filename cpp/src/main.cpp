@@ -17,7 +17,6 @@
 # include "../include/colors.h"
 using namespace std;
 
-
 int  runHistory(int argc, char* argv[]);
 int  runReset();
 int  runBenchmark(int argc, char* argv[]);                          
