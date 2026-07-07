@@ -8,11 +8,11 @@
   </samp>
 
   <!-- Bright, Professional Technology Badges -->
-  [![C++ 17](https://img.shields.io/badge/C%2B%2B-17-00599C?style=for-the-badge&logo=c%2B%2B&logoColor=white)](https://isocpp.org/)
-  [![Python 3.10+](https://img.shields.io/badge/Python-3.10+-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org/)
-  [![Linux WSL2](https://img.shields.io/badge/Linux-WSL2-FCC624?style=for-the-badge&logo=linux&logoColor=black)](https://ubuntu.com/)
-  [![SQLite 3](https://img.shields.io/badge/SQLite-3-003B57?style=for-the-badge&logo=sqlite&logoColor=white)](https://www.sqlite.org/)
-  [![Build Status](https://img.shields.io/badge/CI-passing-4c1?style=for-the-badge&logo=github-actions&logoColor=white)](https://github.com)
+  [![C++_17](https://img.shields.io/badge/C%2B%2B-17-00599C?style=for-the-badge&logo=c%2B%2B&logoColor=white)](https://isocpp.org/)
+  [![Python_3.10+](https://img.shields.io/badge/Python-3.10+-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org/)
+  [![Linux_WSL2](https://img.shields.io/badge/Linux-WSL2-FCC624?style=for-the-badge&logo=linux&logoColor=black)](https://ubuntu.com/)
+  [![SQLite3](https://img.shields.io/badge/SQLite-3-003B57?style=for-the-badge&logo=sqlite&logoColor=white)](https://www.sqlite.org/)
+  [![Build_Status](https://img.shields.io/badge/CI-passing-4c1?style=for-the-badge&logo=github-actions&logoColor=white)](https://github.com)
 
   <br>
 
@@ -21,17 +21,8 @@
 
   <br>
 
-  <!-- Project Achievements & Pedigree -->
-  🏅 **Award Winning:** Awarded the **Gold Medal** in the *Bid and Conquer* HFT Event (International Mathematics Day)  
-  🎓 **Academic Pedigree:** Developed as an independent quantitative systems architecture project across 32 days.
-
   ---
 
-  <p align="center" style="font-size: 15.5px; max-width: 820px; color: #8b949e; line-height: 1.6;">
-    <strong>Vigil Node</strong> is a deterministic, production-grade risk mitigation firewall designed for high-frequency trading (HFT) electronic order books. Operating at microsecond scale, it runs multi-agent parallelized checks—combining deterministic <strong>C++ hardware feature extraction</strong>, an isolated <strong>Python machine learning ensemble (XGBoost + Random Forest)</strong>, and a <strong>topological directed graph analyzer</strong> to block predatory manipulation behaviors (spoofing, layering, and wash trading) completely pre-trade.
-  </p>
-
-</div>
 
 ## 🛡️ Core Mechanism: What It Does
 
