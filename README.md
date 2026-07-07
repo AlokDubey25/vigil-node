@@ -1,42 +1,47 @@
 <div align="center">
 
-  <!-- Main Eye-Catching Banner -->
-  <img src="https://capsule-render.vercel.app/render?type=waving&color=gradient&customColorList=10&height=220&section=header&text=🛡️%20VIGIL%20NODE&fontSize=56&fontColor=ffffff&animation=twinkling" alt="Vigil Node Banner" />
+  <!-- Main Animated Premium Banner -->
+  <img src="https://capsule-render.vercel.app/render?type=waving&color=gradient&customColorList=23&height=220&section=header&text=🛡️%20VIGIL%20NODE&fontSize=56&fontColor=ffffff&animation=twinkling" alt="Vigil Node Banner" />
 
   <samp>
-    <h3>⚡ High-Frequency Pre-Trade Risk Mitigation & Fraud Detection Firewall ⚡</h3>
+    <h2>⚡ Ultra-Low Latency Pre-Trade Fraud Detection Engine ⚡</h2>
   </samp>
 
   <!-- Bright, Professional Technology Badges -->
-  [![C++ 20](https://img.shields.io/badge/C%2B%2B-20-00599C?style=for-the-badge&logo=c%2B%2B&logoColor=white)](https://isocpp.org/)
+  [![C++ 17](https://img.shields.io/badge/C%2B%2B-17-00599C?style=for-the-badge&logo=c%2B%2B&logoColor=white)](https://isocpp.org/)
   [![Python 3.10+](https://img.shields.io/badge/Python-3.10+-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org/)
   [![Linux WSL2](https://img.shields.io/badge/Linux-WSL2-FCC624?style=for-the-badge&logo=linux&logoColor=black)](https://ubuntu.com/)
   [![SQLite 3](https://img.shields.io/badge/SQLite-3-003B57?style=for-the-badge&logo=sqlite&logoColor=white)](https://www.sqlite.org/)
   [![Build Status](https://img.shields.io/badge/CI-passing-4c1?style=for-the-badge&logo=github-actions&logoColor=white)](https://github.com)
 
   <br>
-  
-  🚀 **Engine State:** `PRODUCTION_ACTIVE` | ⏱️ **Base Latency:** `< 5µs` | 📊 **TUI Dashboard:** `ENABLED`
+
+  <!-- Live Engine Operational Matrix -->
+  <code>🟢 Engine: ONLINE</code> │ <code>⏱️ Latency: < 5µs</code> │ <code>📊 5-Panel TUI Console: ENABLED</code> │ <code>🗄️ Storage: SQLite WAL</code>
+
+  <br>
+
+  <!-- Project Achievements & Pedigree -->
+  🏅 **Award Winning:** Awarded the **Gold Medal** in the *Bid and Conquer* HFT Event (International Mathematics Day)  
+  🎓 **Academic Pedigree:** Developed as an independent quantitative systems architecture project across 32 days.
 
   ---
 
-  <p align="center" style="font-size: 15px; max-width: 850px; color: #8b949e;">
-    <strong>Vigil Node</strong> is a deterministic, ultra-low latency risk mitigation firewall designed to secure electronic order books. It intercepts illicit high-frequency trading behaviors directly at the boundary, applying parallelized machine learning classifiers and structural graph algorithms to market instructions before execution matching can occur.
+  <p align="center" style="font-size: 15.5px; max-width: 820px; color: #8b949e; line-height: 1.6;">
+    <strong>Vigil Node</strong> is a deterministic, production-grade risk mitigation firewall designed for high-frequency trading (HFT) electronic order books. Operating at microsecond scale, it runs multi-agent parallelized checks—combining deterministic <strong>C++ hardware feature extraction</strong>, an isolated <strong>Python machine learning ensemble (XGBoost + Random Forest)</strong>, and a <strong>topological directed graph analyzer</strong> to block predatory manipulation behaviors (spoofing, layering, and wash trading) completely pre-trade.
   </p>
 
 </div>
 
-<br>
-
 ## 🛡️ Core Mechanism: What It Does
 
-Every single transaction request hitting the network gateway passes through **three completely independent verification phases** before it can interact with the order book structures:
+Every order placed through Vigil Node passes through three completely independent checks before it can touch the order book:
 
 ---
 
-1. **🟩 Static Guard** — Immediate boundary verification evaluating clearing account cash balances against unexecuted risk. Dropping defective requests here guarantees that heavy downstream assets are never wasted on structurally un-clearable traffic.
-2. **🟨 Behavioral ML** — Extracts an aggressive feature vector dynamically per order (*velocity, cancel rate, price deviation, size ratio, time between orders, and repeat price rate*). Telemetry is streamed across a low-latency inter-process communication (IPC) pipe to an external process running an **XGBoost + Random Forest Ensemble Model**.
-3. **🟥 Graph Network Analysis** — Inbound orders dynamically map directed paths across active `Buyer → Seller` relationships inside memory-mapped structures. A highly parallelized Deep First Search (DFS) algorithm screens for circular dependency feedback loops—instantly catching synthetic volume generation patterns (wash trades) hidden across dozens of nested client IDs that standard ML classifiers miss.
+1. **🟩 Balance check** — instant rejection if funds are insufficient, no ML cost paid
+2. **🟨 Behavioral ML** — six features extracted per order (velocity, cancel rate, price deviation, size ratio, time between orders, repeat price rate) sent to an XGBoost + Random Forest ensemble over a live IPC bridge
+3. **🟥 Graph network analysis** — directed trade graph tracks buyer→seller edges; DFS cycle detection catches wash trading rings the ML never sees
 
 > 📝 **Enforcement Verdict:** If any pipeline check fails, the instruction is rejected with a plain-English explanation, a SHAP-based technical reason, and a permanent forensic audit log entry. If all three pass, the order safely logs into the L2 order book matrix and the matching engine executes.
 
