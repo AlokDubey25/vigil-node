@@ -3,38 +3,44 @@
   <!-- Main Animated Premium Banner -->
   <img src="https://capsule-render.vercel.app/render?type=waving&color=gradient&customColorList=23&height=220&section=header&text=🛡️%20VIGIL%20NODE&fontSize=56&fontColor=ffffff&animation=twinkling" alt="Vigil Node Banner" />
 
-  <samp>
-    <h2>⚡ Ultra-Low Latency Pre-Trade Fraud Detection Engine ⚡</h2>
-  </samp>
+  <h2>⚡ Ultra-Low Latency Pre-Trade Fraud Detection Engine ⚡</h2>
 
-  <!-- Bright, Professional Technology Badges -->
-  [![C++_17](https://img.shields.io/badge/C%2B%2B-17-00599C?style=for-the-badge&logo=c%2B%2B&logoColor=white)](https://isocpp.org/)
-  [![Python_3.10+](https://img.shields.io/badge/Python-3.10+-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org/)
-  [![Linux_WSL2](https://img.shields.io/badge/Linux-WSL2-FCC624?style=for-the-badge&logo=linux&logoColor=black)](https://ubuntu.com/)
-  [![SQLite3](https://img.shields.io/badge/SQLite-3-003B57?style=for-the-badge&logo=sqlite&logoColor=white)](https://www.sqlite.org/)
-  [![Build_Status](https://img.shields.io/badge/CI-passing-4c1?style=for-the-badge&logo=github-actions&logoColor=white)](https://github.com)
+  <!-- Clean Tech Badges Layout Matrix -->
+  <p align="center">
+    <img src="https://img.shields.io/badge/C%2B%2B-17-00599C?style=for-the-badge&logo=c%2B%2B&logoColor=white" alt="C++" />
+    <img src="https://img.shields.io/badge/Python-3.10+-3776AB?style=for-the-badge&logo=python&logoColor=white" alt="Python" />
+    <img src="https://img.shields.io/badge/Linux-WSL2-FCC624?style=for-the-badge&logo=linux&logoColor=black" alt="Linux" />
+    <img src="https://img.shields.io/badge/SQLite-3-003B57?style=for-the-badge&logo=sqlite&logoColor=white" alt="SQLite" />
+    <img src="https://img.shields.io/badge/CI-passing-4c1?style=for-the-badge&logo=github-actions&logoColor=white" alt="CI" />
+  </p>
 
-  <br>
+  <!-- Live Operational Status Ribbon -->
+  <p align="center">
+    <code>🟢 Engine: ONLINE</code> &nbsp;🕒&nbsp; 
+    <code>⏱️ Latency: < 5µs</code> &nbsp;🕒&nbsp; 
+    <code>📊 5-Panel TUI Console: ENABLED</code> &nbsp;🕒&nbsp; 
+    <code>🗄️ Storage: SQLite WAL</code>
+  </p>
 
-  <!-- Live Engine Operational Matrix -->
-  <code>🟢 Engine: ONLINE</code> │ <code>⏱️ Latency: < 5µs</code> │ <code>📊 5-Panel TUI Console: ENABLED</code> │ <code>🗄️ Storage: SQLite WAL</code>
+  <!-- Key Accolades -->
+  <p align="center">
+    🏅 **Award Winning:** Earned the **Gold Medal** in the <em>Bid and Conquer</em> algorithmic event.
+  </p>
 
-  <br>
+</div>
 
-  ---
-
+---
 
 ## 🛡️ Core Mechanism: What It Does
 
 Every order placed through Vigil Node passes through three completely independent checks before it can touch the order book:
 
----
-
-1. **🟩 Balance check** — instant rejection if funds are insufficient, no ML cost paid
-2. **🟨 Behavioral ML** — six features extracted per order (velocity, cancel rate, price deviation, size ratio, time between orders, repeat price rate) sent to an XGBoost + Random Forest ensemble over a live IPC bridge
-3. **🟥 Graph network analysis** — directed trade graph tracks buyer→seller edges; DFS cycle detection catches wash trading rings the ML never sees
+1. 🟩 **Balance check** — instant rejection if funds are insufficient, no ML cost paid.
+2. 🟨 **Behavioral ML** — six features extracted per order (*velocity, cancel rate, price deviation, size ratio, time between orders, repeat price rate*) sent to an XGBoost + Random Forest ensemble over a live IPC bridge.
+3. 🟥 **Graph network analysis** — directed trade graph tracks `buyer → seller` edges; DFS cycle detection catches wash trading rings the ML never sees.
 
 > 📝 **Enforcement Verdict:** If any pipeline check fails, the instruction is rejected with a plain-English explanation, a SHAP-based technical reason, and a permanent forensic audit log entry. If all three pass, the order safely logs into the L2 order book matrix and the matching engine executes.
+
 
 ---
 
