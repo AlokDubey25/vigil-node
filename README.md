@@ -1,37 +1,29 @@
 <div align="center">
 
-  <!-- Main Animated Premium Banner -->
-  <img src="https://capsule-render.vercel.app/render?type=waving&color=gradient&customColorList=23&height=220&section=header&text=🛡️%20VIGIL%20NODE&fontSize=56&fontColor=ffffff&animation=twinkling" alt="Vigil Node Banner" />
+  <h1>🛡️ Vigil Node</h1>
 
   <h2>⚡ Ultra-Low Latency Pre-Trade Fraud Detection Engine ⚡</h2>
 
-  <!-- Clean Tech Badges Layout Matrix -->
   <p align="center">
     <img src="https://img.shields.io/badge/C%2B%2B-17-00599C?style=for-the-badge&logo=c%2B%2B&logoColor=white" alt="C++" />
     <img src="https://img.shields.io/badge/Python-3.10+-3776AB?style=for-the-badge&logo=python&logoColor=white" alt="Python" />
     <img src="https://img.shields.io/badge/Linux-WSL2-FCC624?style=for-the-badge&logo=linux&logoColor=black" alt="Linux" />
     <img src="https://img.shields.io/badge/SQLite-3-003B57?style=for-the-badge&logo=sqlite&logoColor=white" alt="SQLite" />
-    <img src="https://img.shields.io/badge/CI-passing-4c1?style=for-the-badge&logo=github-actions&logoColor=white" alt="CI" />
+    <img src="https://img.shields.io/badge/CI-passing-42b883?style=for-the-badge&logo=github-actions&logoColor=white" alt="CI" />
   </p>
 
-  <!-- Live Operational Status Ribbon -->
   <p align="center">
-    <code>🟢 Engine: ONLINE</code> &nbsp;🕒&nbsp; 
-    <code>⏱️ Latency: < 5µs</code> &nbsp;🕒&nbsp; 
-    <code>📊 5-Panel TUI Console: ENABLED</code> &nbsp;🕒&nbsp; 
-    <code>🗄️ Storage: SQLite WAL</code>
-  </p>
-
-  <!-- Key Accolades -->
-  <p align="center">
-    🏅 **Award Winning:** Earned the **Gold Medal** in the <em>Bid and Conquer</em> algorithmic event.
+    <img src="https://img.shields.io/badge/ENGINE-ONLINE-31E165?style=flat-square&logo=engine&logoColor=white" alt="Engine Online" />
+    <img src="https://img.shields.io/badge/LATENCY-%3C_5%C2%B5s-FF3366?style=flat-square&logo=speedtest&logoColor=white" alt="Latency" />
+    <img src="https://img.shields.io/badge/TUI_CONSOLE-ENABLED-00ADB5?style=flat-square&logo=gnumetallurgy&logoColor=white" alt="TUI Dashboard" />
+    <img src="https://img.shields.io/badge/STORAGE-SQLite_WAL-FF9F43?style=flat-square&logo=sqlite&logoColor=white" alt="Storage SQLite WAL" />
   </p>
 
 </div>
 
 ---
 
-## 🛡️ Core Mechanism: What It Does
+##  Core Mechanism: What It Does
 
 Every order placed through Vigil Node passes through three completely independent checks before it can touch the order book:
 
