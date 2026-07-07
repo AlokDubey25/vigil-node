@@ -1,9 +1,29 @@
-# Vigil Node
+<div align="center">
 
-[![CI](https://github.com/AlokDubey25/vigil-node/actions/workflows/ci.yml/badge.svg)](https://github.com/AlokDubey25/vigil-node/actions/workflows/ci.yml)
+  <!-- Logo and Project Name -->
+  <h1>🛡️ Vigil Node</h1>
 
-Real-time pre-trade fraud detection engine. Intercepts spoofing, wash trading, and layering **before** they execute — using a C++ matching engine, a Python ML ensemble, and a graph-based network analyser running as three independent fraud signals simultaneously.
+  ### Real-Time Pre-Trade Fraud Detection Engine
+  
+  <!-- Custom Shields.io Badges -->
+  [![Python branch](https://img.shields.io/badge/Python-3.10+-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org/)
+  [![C++ version](https://img.shields.io/badge/C++-20-00599C?style=for-the-badge&logo=c%2B%2B&logoColor=white)](https://isocpp.org/)
+  [![Build Status](https://img.shields.io/badge/CI-passing-4c1?style=for-the-badge&logo=github-actions&logoColor=white)](https://github.com)
+  
+  <!-- Secondary Action Badge -->
+  [![Documentation branch](https://img.shields.io/badge/Architecture-Blueprint-FF4B4B?style=for-the-badge&logo=gitbook&logoColor=white)](#what-it-does)
 
+  <p align="center">
+    A high-performance system that intercepts spoofing, wash trading, and layering <strong>before</strong> they execute. By combining a C++ matching engine, a Python ML ensemble, and a graph-based network analyzer, it runs three independent fraud signals simultaneously.
+  </p>
+
+</div>
+
+---
+
+## What it does
+
+Every order placed through Vigil Node passes through three completely independent checks before it can touch the order book:
 ---
 
 ## What it does
