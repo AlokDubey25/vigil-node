@@ -97,7 +97,7 @@ C++ handles the order book, feature extraction, graph analysis, and IPC bridge â
 
 - GCC 11+ or Clang 13+ with C++17
 - CMake 3.16+
-- Python 3.10+
+- Python 3.11+ (pinned deps such as `pandas`/`numpy` require 3.11+)
 - SQLite3 (vendored amalgamation included)
 
 ### Build
