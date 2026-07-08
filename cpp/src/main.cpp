@@ -6,6 +6,8 @@
 # include <chrono>
 # include <cstdio>
 # include <vector>
+#include <fcntl.h>
+#include <unistd.h>
 # include "../include/order.h"
 # include "../include/orderbook.h"
 # include "../include/trade.h"
@@ -254,27 +256,38 @@ int runBenchmark(int argc, char* argv[]) {
               chrono::duration<double>(chrono::steady_clock::now()-t0).count()); }
 
     // stage 4 — + ML bridge (smaller N — bridge is slow)
-    { int BN = min(N, 500); auto orders = gen(BN);
-      OrderBook book; FeatureExtractor ex;
-      Config cfg("config/settings.json");
-      Bridge bridge("python3 python/bridge/scorer.py",
+    { int BN = min(N, 200);   // ← reduce to 200, enough to measure
+    auto orders = gen(BN);
+    OrderBook book; FeatureExtractor ex;
+    Config cfg("config/settings.json");
+    
+    // silence bridge noise during benchmark
+    int devnull = open("/dev/null", O_WRONLY);
+    int saved_stderr = dup(STDERR_FILENO);
+    dup2(devnull, STDERR_FILENO);
+    
+    Bridge bridge("python3 python/bridge/scorer.py",
                     cfg.getInt("bridge_timeout_ms", 100));
-      if (!bridge.isReady()) {
-          cout << Color::yellow("stage 4 — skipped (bridge not ready)\n");
-      } else {
-          auto t0 = chrono::steady_clock::now();
-          for (auto& o : orders) {
-              double mid = (book.hasBuys() && book.hasSells())
-                  ? (book.getBestBidPrice() + book.getBestAskPrice()) / 2.0 : 0.0;
-              FeatureVector fv = ex.extract(o, mid);
-              bridge.score(fv.toJSON());
-              book.addOrder(o);
-              if (book.hasBuys() && book.hasSells() &&
-                  book.getBestBid() >= book.getBestAsk()) book.matchOrders();
-          }
-          measure("stage 4 — + ML bridge (N=" + to_string(BN) + "):", BN,
-                  chrono::duration<double>(chrono::steady_clock::now()-t0).count());
-      }
+    
+    dup2(saved_stderr, STDERR_FILENO);  // restore stderr
+    close(devnull); close(saved_stderr);
+
+    if (!bridge.isReady()) {
+        cout << Color::yellow("stage 4 — skipped (bridge not ready)\n");
+    } else {
+        auto t0 = chrono::steady_clock::now();
+        for (auto& o : orders) {
+            double mid = (book.hasBuys() && book.hasSells())
+                ? (book.getBestBidPrice() + book.getBestAskPrice()) / 2.0 : 0.0;
+            FeatureVector fv = ex.extract(o, mid);
+            bridge.score(fv.toJSON());
+            book.addOrder(o);
+            if (book.hasBuys() && book.hasSells() &&
+                book.getBestBid() >= book.getBestAsk()) book.matchOrders();
+        }
+        measure("stage 4 — + ML bridge (N=" + to_string(BN) + "):", BN,
+                chrono::duration<double>(chrono::steady_clock::now()-t0).count());
+    }
     }
     cout << Color::dim("\nbottleneck is always the bridge — one IPC round-trip per order\n");
     return 0;
@@ -574,6 +587,15 @@ void runInteractive(DatabaseHandler& db, Bridge& bridge,
             continue;
         }
         if (choice == "7") { book.printBook(); continue; }
+        if (choice == "8") {
+            int id = promptInt("  Order ID to cancel? ");
+            if (id <= 0) {
+                cout << Color::red("  invalid order ID\n");
+            } else {
+                cancelOrderByID(id, book, db, extractor, orderUsers);
+            }
+            continue;
+        }
         if (choice == "9") {
             cout << "  Enter new name: ";
             getline(cin, currentUser);
