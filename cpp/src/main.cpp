@@ -574,6 +574,11 @@ void runInteractive(DatabaseHandler& db, Bridge& bridge,
             continue;
         }
         if (choice == "7") { book.printBook(); continue; }
+        if (choice == "8") {
+            int oid = promptInt("  Order ID to cancel? ");
+            cancelOrderByID(oid, book, db, extractor, orderUsers);
+            continue;
+        }
         if (choice == "9") {
             cout << "  Enter new name: ";
             getline(cin, currentUser);
