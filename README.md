@@ -1,25 +1,25 @@
 # vigil-node
 
-    <div align="center">
+<div align="center">
 
-    <h1>🛡️ Vigil Node</h1>
+ <h1>🛡️ Vigil Node</h1>
 
-    <h2>⚡ Ultra-Low Latency Pre-Trade Fraud Detection Engine ⚡</h2>
+ <h2>⚡ Ultra-Low Latency Pre-Trade Fraud Detection Engine ⚡</h2>
 
-    <p align="center">
-      <img src="https://img.shields.io/badge/C%2B%2B-17-00599C?style=for-the-badge&logo=c%2B%2B&logoColor=white" alt="C++" />
-      <img src="https://img.shields.io/badge/Python-3.10+-3776AB?style=for-the-badge&logo=python&logoColor=white" alt="Python" />
-      <img src="https://img.shields.io/badge/Linux-WSL2-FCC624?style=for-the-badge&logo=linux&logoColor=black" alt="Linux" />
-      <img src="https://img.shields.io/badge/SQLite-3-003B57?style=for-the-badge&logo=sqlite&logoColor=white" alt="SQLite" />
-      <img src="https://img.shields.io/badge/CI-passing-42b883?style=for-the-badge&logo=github-actions&logoColor=white" alt="CI" />
-    </p>
+<p align="center">
+    <img src="https://img.shields.io/badge/C%2B%2B-17-00599C?style=for-the-badge&logo=c%2B%2B&logoColor=white" alt="C++" />
+    <img src="https://img.shields.io/badge/Python-3.10+-3776AB?style=for-the-badge&logo=python&logoColor=white" alt="Python" />
+    <img src="https://img.shields.io/badge/Linux-WSL2-FCC624?style=for-the-badge&logo=linux&logoColor=black" alt="Linux" />
+    <img src="https://img.shields.io/badge/SQLite-3-003B57?style=for-the-badge&logo=sqlite&logoColor=white" alt="SQLite" />
+    <img src="https://img.shields.io/badge/CI-passing-42b883?style=for-the-badge&logo=github-actions&logoColor=white" alt="CI" />
+</p>
 
-    <p align="center">
-      <img src="https://img.shields.io/badge/ENGINE-ONLINE-31E165?style=flat-square&logo=engine&logoColor=white" alt="Engine Online" />
-      <img src="https://img.shields.io/badge/LATENCY-%3C_5%C2%B5s-FF3366?style=flat-square&logo=speedtest&logoColor=white" alt="Latency" />
-      <img src="https://img.shields.io/badge/TUI_CONSOLE-ENABLED-00ADB5?style=flat-square&logo=gnumetallurgy&logoColor=white" alt="TUI Dashboard" />
-      <img src="https://img.shields.io/badge/STORAGE-SQLite_WAL-FF9F43?style=flat-square&logo=sqlite&logoColor=white" alt="Storage SQLite WAL" />
-    </p>
+<p align="center">
+    <img src="https://img.shields.io/badge/ENGINE-ONLINE-31E165?style=flat-square&logo=engine&logoColor=white" alt="Engine Online" />
+    <img src="https://img.shields.io/badge/LATENCY-%3C_5%C2%B5s-FF3366?style=flat-square&logo=speedtest&logoColor=white" alt="Latency" />
+    <img src="https://img.shields.io/badge/TUI_CONSOLE-ENABLED-00ADB5?style=flat-square&logo=gnumetallurgy&logoColor=white" alt="TUI Dashboard" />
+    <img src="https://img.shields.io/badge/STORAGE-SQLite_WAL-FF9F43?style=flat-square&logo=sqlite&logoColor=white" alt="Storage SQLite WAL" />
+</p>
 
 </div>
 
@@ -39,7 +39,6 @@ Every order placed through Vigil Node passes through three completely independen
 
 ## 🏗️ System Architecture
 
-<!--disable MD046 Error>
 ``` Architecture
 
 User (interactive menu or run command)
@@ -98,7 +97,7 @@ C++ handles the order book, feature extraction, graph analysis, and IPC bridge �
 
 - GCC 11+ or Clang 13+ with C++17
 - CMake 3.16+
-- Python 3.10+
+- Python 3.11+ (pinned deps such as `pandas`/`numpy` require 3.11+)
 - SQLite3 (vendored amalgamation included)
 
 ### Build
