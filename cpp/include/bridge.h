@@ -22,6 +22,11 @@ public:
     // used when python is unavailable
     static constexpr double FALLBACK_SCORE = 0.5;
 
+    // max time to wait for the scorer's ready signal at startup; generous
+    // because heavy imports + model load can take tens of seconds on slow
+    // filesystems (e.g. a WSL /mnt/c mount)
+    static constexpr int READY_TIMEOUT_MS = 30000;
+
     string getLastExplanation() const { return lastExplanation_; }
 
 private:

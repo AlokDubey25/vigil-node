@@ -82,8 +82,12 @@ Bridge::~Bridge(){
 }
 
 // wait for {ready : true} from py
+// generous timeout: the scorer imports heavy libs (shap, xgboost, numba)
+// and loads pickled models on startup, which can take tens of seconds on
+// slow filesystems (e.g. a WSL /mnt/c mount). readLineWithTimeout returns
+// as soon as the ready line arrives, so this only affects the worst case.
 bool Bridge::waitForReady(){
-    auto [ok, line] = readLineWithTimeout(5000);
+    auto [ok, line] = readLineWithTimeout(READY_TIMEOUT_MS);
     if (!ok) return false;
     return line.find("ready") != string::npos;
 }
