@@ -18,6 +18,7 @@
 using namespace std;
 
 int  runHistory(int argc, char* argv[]);
+int  runExplain(int argc, char* argv[]);
 int  runReset();
 int  runBenchmark(int argc, char* argv[]);                          
 void runInteractive(DatabaseHandler& db,  
@@ -57,6 +58,7 @@ void printUsage() {
          << "  run           run the demo order set\n"
          << "  interactive   guided menu — buy, sell, deposit, withdraw, and more\n"
          << "  history <uid> last 10 transactions for a user\n"
+         << "  explain <id>  full decision trail for one order\n"
          << "  reset         wipe vigil.db and start fresh\n"
          << "  --help        this message\n"  
          << "  benchmark [--n N]  measure orders/sec at each pipeline stage\n"; 
@@ -68,6 +70,7 @@ int main(int argc, char* argv[]){
 
     string cmd = argv[1];
     if (cmd == "history")     return runHistory(argc, argv);
+    if (cmd == "explain")     return runExplain(argc, argv);
     if (cmd == "benchmark") return runBenchmark(argc, argv);
     if (cmd == "reset")       return runReset();      
     if (cmd == "--help")      { printUsage(); return 0; }
@@ -221,7 +224,7 @@ int runBenchmark(int argc, char* argv[]) {
       for (auto& o : orders) {
           book.addOrder(o);
           if (book.hasBuys() && book.hasSells() &&
-              book.getBestBid() >= book.getBestAsk()) book.matchOrders();
+              book.getBestBid() >= book.getBestAsk()) book.matchOrders(false);
       }
       measure("stage 1 — order book only:", N,
               chrono::duration<double>(chrono::steady_clock::now()-t0).count()); }
@@ -234,7 +237,7 @@ int runBenchmark(int argc, char* argv[]) {
           db.saveOrder(o); book.addOrder(o);
           if (book.hasBuys() && book.hasSells() &&
               book.getBestBid() >= book.getBestAsk())
-              { Trade t = book.matchOrders(); if(t.quantity) db.saveTrade(t); }
+              { Trade t = book.matchOrders(false); if(t.quantity) db.saveTrade(t); }
       }
       measure("stage 2 — + SQLite persistence:", N,
               chrono::duration<double>(chrono::steady_clock::now()-t0).count());
@@ -248,7 +251,7 @@ int runBenchmark(int argc, char* argv[]) {
               ? (book.getBestBidPrice() + book.getBestAskPrice()) / 2.0 : 0.0;
           ex.extract(o, mid); book.addOrder(o);
           if (book.hasBuys() && book.hasSells() &&
-              book.getBestBid() >= book.getBestAsk()) book.matchOrders();
+              book.getBestBid() >= book.getBestAsk()) book.matchOrders(false);
       }
       measure("stage 3 — + feature extraction:", N,
               chrono::duration<double>(chrono::steady_clock::now()-t0).count()); }
@@ -270,7 +273,7 @@ int runBenchmark(int argc, char* argv[]) {
               bridge.score(fv.toJSON());
               book.addOrder(o);
               if (book.hasBuys() && book.hasSells() &&
-                  book.getBestBid() >= book.getBestAsk()) book.matchOrders();
+                  book.getBestBid() >= book.getBestAsk()) book.matchOrders(false);
           }
           measure("stage 4 — + ML bridge (N=" + to_string(BN) + "):", BN,
                   chrono::duration<double>(chrono::steady_clock::now()-t0).count());
@@ -477,6 +480,51 @@ int runHistory(int argc, char* argv[]) {
              << "  -> balance Rs." << r.balanceAfter;
         if (!r.note.empty()) cout << "  (" << r.note << ")";
         cout << "\n";
+    }
+    return 0;
+}
+
+int runExplain(int argc, char* argv[]) {
+    if (argc < 3) {
+        cerr<< Color::red("[ERROR] usage: ./build/vigil explain <orderID>") << "\n";
+        return 1;
+    }
+
+    int orderID;
+    try {
+        orderID = stoi(argv[2]);
+    } catch (...) {
+        cerr<< Color::red("[ERROR] invalid order id: " + string(argv[2])) << "\n";
+        return 1;
+    }
+
+    DatabaseHandler db("vigil.db");
+    if (!db.isOpen()) return 1;
+
+    OrderRecord o = db.getOrder(orderID);
+    if (!o.found) {
+        cout<< Color::yellow("no order found with ID " + to_string(orderID)) << "\n";
+        return 1;
+    }
+
+    cout<< Color::bold("==== Decision Trail: order " + to_string(orderID) + " ====") << "\n";
+    cout<< "  user:     " << o.userID << "\n";
+    cout<< "  side:     " << o.side << "\n";
+    cout<< "  price:    Rs." << fixed << setprecision(2) << o.price << "\n";
+    cout<< "  quantity: " << o.quantity << "\n";
+    cout<< "  status:   " << o.status << "\n";
+    cout<< "  score:    " << fixed << setprecision(4) << o.blockScore << "\n";
+    cout<< "  flagged:  " << (o.fraudFlag ? "yes" : "no") << "\n";
+
+    auto events = db.getRiskEventsForOrder(orderID);
+    if (events.empty()) {
+        cout<< Color::dim("  no risk events logged — order passed all checks") << "\n";
+    } else {
+        cout<< Color::bold("  --- risk events ---") << "\n";
+        for (const auto& e : events) {
+            cout<< "  [" << e.action << "] score=" << fixed << setprecision(4)
+                << e.fraudScore << "  " << e.reason << "\n";
+        }
     }
     return 0;
 }

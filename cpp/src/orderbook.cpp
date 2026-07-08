@@ -88,7 +88,7 @@ bool OrderBook::hasSells() const{
     return !sellBook_.empty();
 }
 
-Trade OrderBook::matchOrders(){
+Trade OrderBook::matchOrders(bool verbose){
     // its by default so if zero quantity or no match is there
     Trade noMatch;
 
@@ -114,12 +114,13 @@ Trade OrderBook::matchOrders(){
     t.quantity = tradeQty;
     t.timestamp = static_cast<long long>(time(nullptr));
 
-    cout<< "[Trade] " << buyOrder.userID
-        << "buys from " << sellOrder.userID
-        << "| qty: " << tradeQty
-        << "@ Rs. " 
-        << fixed << setprecision(2)
-        << sellOrder.price << "\n";
+    if (verbose)
+        cout<< "[Trade] " << buyOrder.userID
+            << "buys from " << sellOrder.userID
+            << "| qty: " << tradeQty
+            << "@ Rs. " 
+            << fixed << setprecision(2)
+            << sellOrder.price << "\n";
 
 
     buyOrder.quantity -= tradeQty;
