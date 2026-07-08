@@ -16,6 +16,30 @@ struct TransactionRecord{
         long long timestamp;
         string    note;
     };
+
+// one order row from the orders table (used by the `explain` command)
+struct OrderRecord{
+        bool      found = false;
+        int       orderID = 0;
+        string    userID;
+        double    price = 0.0;
+        int       quantity = 0;
+        string    side;
+        long long timestamp = 0;
+        string    status;
+        double    blockScore = 0.0;
+        int       fraudFlag = 0;
+    };
+
+// one risk_log row for an order (score, reason, action)
+struct RiskRecord{
+        string    userID;
+        int       orderID = 0;
+        double    fraudScore = 0.0;
+        string    reason;
+        string    action;
+        long long timestamp = 0;
+    };
     
 class DatabaseHandler{
 public:
@@ -55,6 +79,10 @@ public:
 
     vector<TransactionRecord> getRecentTransactions(int limit = 10);
     vector<TransactionRecord> getTransactionsForUser(const string& userID, int limit = 10);
+
+    // used by the `explain` command to rebuild an order's decision trail
+    OrderRecord getOrder(int orderID);
+    vector<RiskRecord> getRiskEventsForOrder(int orderID);
 
     double getBalance(const string& userID);
 

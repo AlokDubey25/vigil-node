@@ -339,6 +339,75 @@ vector<pair <string, string >> DatabaseHandler::getTradePairs() {
     return pairs;
 }
 
+OrderRecord DatabaseHandler::getOrder(int orderID) {
+    OrderRecord rec;
+    if (!db_) return rec;
+
+    const char* sql =
+        "SELECT orderID, userID, price, quantity, side, timestamp, "
+        "       status, blockScore, fraudFlag "
+        "  FROM orders WHERE orderID = ?";
+
+    sqlite3_stmt* stmt = nullptr;
+    if (sqlite3_prepare_v2(db_, sql, -1, &stmt, nullptr) != SQLITE_OK) {
+        cerr << "[DB] getOrder prepare: " << sqlite3_errmsg(db_) << "\n";
+        return rec;
+    }
+    sqlite3_bind_int(stmt, 1, orderID);
+
+    if (sqlite3_step(stmt) == SQLITE_ROW) {
+        rec.found     = true;
+        rec.orderID   = sqlite3_column_int(stmt, 0);
+        const char* u = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 1));
+        rec.userID    = u ? u : "";
+        rec.price     = sqlite3_column_double(stmt, 2);
+        rec.quantity  = sqlite3_column_int(stmt, 3);
+        const char* s = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 4));
+        rec.side      = s ? s : "";
+        rec.timestamp = sqlite3_column_int64(stmt, 5);
+        const char* st = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 6));
+        rec.status    = st ? st : "";
+        rec.blockScore = sqlite3_column_double(stmt, 7);
+        rec.fraudFlag  = sqlite3_column_int(stmt, 8);
+    }
+
+    sqlite3_finalize(stmt);
+    return rec;
+}
+
+vector<RiskRecord> DatabaseHandler::getRiskEventsForOrder(int orderID) {
+    vector<RiskRecord> events;
+    if (!db_) return events;
+
+    const char* sql =
+        "SELECT userID, orderID, fraudScore, reason, action, timestamp "
+        "  FROM risk_log WHERE orderID = ? ORDER BY timestamp ASC, logID ASC";
+
+    sqlite3_stmt* stmt = nullptr;
+    if (sqlite3_prepare_v2(db_, sql, -1, &stmt, nullptr) != SQLITE_OK) {
+        cerr << "[DB] getRiskEventsForOrder prepare: " << sqlite3_errmsg(db_) << "\n";
+        return events;
+    }
+    sqlite3_bind_int(stmt, 1, orderID);
+
+    while (sqlite3_step(stmt) == SQLITE_ROW) {
+        RiskRecord r;
+        const char* u = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 0));
+        r.userID     = u ? u : "";
+        r.orderID    = sqlite3_column_int(stmt, 1);
+        r.fraudScore = sqlite3_column_double(stmt, 2);
+        const char* rs = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 3));
+        r.reason     = rs ? rs : "";
+        const char* a = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 4));
+        r.action     = a ? a : "";
+        r.timestamp  = sqlite3_column_int64(stmt, 5);
+        events.push_back(r);
+    }
+
+    sqlite3_finalize(stmt);
+    return events;
+}
+
 bool DatabaseHandler::logTransaction(const string& userID, const string& type, 
                                      double amount, double balanceAfter, const string& note) {
 
