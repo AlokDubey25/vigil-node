@@ -111,7 +111,7 @@ int main(int argc, char* argv[]){
 
     // 03 :- Python bridge which is added now - it launched once, stays runnig
     // run ./vigil from project root so the path resolves correctly
-    Bridge bridge("python3 python/bridge/scorer.py", BRIDGE_TIMEOUT);
+    Bridge bridge(".venv/bin/python3 python/bridge/scorer.py", BRIDGE_TIMEOUT);
     if (!bridge.isReady()){
         cerr<< Color::yellow("[WARN] Bridge not ready - using fallback score") << "\n";
     }
@@ -361,6 +361,8 @@ int runBenchmark(int argc, char* argv[]) {
     close(devnull);
     close(saved_stdout);
     close(saved_stderr);
+
+    return 0;
 }
 
 

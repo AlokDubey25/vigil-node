@@ -1,6 +1,7 @@
 import sys, os, json
 import logging
 
+sys.stdout.reconfigure(line_buffering = True)
 ROOT  = os.path.abspath(os.path.join(os.path.dirname(__file__), "../.."))
 sys.path.insert(0, ROOT)
 
@@ -13,14 +14,13 @@ log = get_logger("scorer")
 
 def write(payload: dict):
     try:
-        print(json.dumps(payload), flush=True)
+        print(json.dumps({"ready": True}), flush=True)
     except BrokenPipeError:
         pass
 
 def main():
     # Startip : load models
-    sys.stdout.reconfigure(line_buffering = True)
-
+   
     log.info("Loadinf mmodels......")
     try:
         load_models()
