@@ -83,7 +83,7 @@ Bridge::~Bridge(){
 
 // wait for {ready : true} from py
 bool Bridge::waitForReady(){
-    auto [ok, line] = readLineWithTimeout(30000);
+    auto [ok, line] = readLineWithTimeout(5000);
     if (!ok) return false;
     return line.find("ready") != string::npos;
 }
