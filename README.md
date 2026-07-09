@@ -39,7 +39,7 @@ Every order placed through Vigil Node passes through three completely independen
 
 ## 🏗️ System Architecture
 
-<!--disable MD046 Error>
+
 ``` Architecture
 
 User (interactive menu or run command)
