@@ -14,7 +14,7 @@ DatabaseHandler::DatabaseHandler(const string& dbPath){
         return;
     }
 
-    cout<< "[DB] Opneed: " << dbPath << "\n";
+    cout<< "[DB] Opned: " << dbPath << "\n";
 
     // Turning Foreign key ON to avoid confusion of not existing rows
     execSQL("PRAGMA journal_mode = WAL;");               // concurrent reads + writes

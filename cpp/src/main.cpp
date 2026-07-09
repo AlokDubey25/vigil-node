@@ -108,7 +108,7 @@ int main(int argc, char* argv[]){
     // load previously blocked users into unordered_set for O(1)
     auto blacklist = db.loadBlacklist();
     unordered_set<string> blocked(blacklist.begin(), blacklist.end());
-    cout<< "[ENIGINE]" << blocked.size() << " users on permanent blacklist\n";
+    cout<< "[ENGINE]" << blocked.size() << " users on permanent blacklist\n";
 
     
 

@@ -64,7 +64,7 @@ Bridge::Bridge(const string& command, int timeoutMs)
     if (ready_)
         cout<< "[BRIDGE] python scorer is ready\n";
     else
-        cerr<< "[BRIDGE] pyhton did not send ready signal\n";
+        cerr<< "[BRIDGE] python did not send ready signal\n";
 }
 
 Bridge::~Bridge(){
@@ -83,7 +83,7 @@ Bridge::~Bridge(){
 
 // wait for {ready : true} from py
 bool Bridge::waitForReady(){
-    auto [ok, line] = readLineWithTimeout(15000);
+    auto [ok, line] = readLineWithTimeout(30000);
     if (!ok) return false;
     return line.find("ready") != string::npos;
 }

@@ -5,7 +5,7 @@ import os
 np.random.seed(42)
 
 N_NORMAL = 4000
-N_FRAUD  = 400        # here we took 10% fraud rate 
+N_FRAUD  = 600        # here we took 10% fraud rate 
 
 
 # Every freking thing is normal 
@@ -56,14 +56,27 @@ def wash_order() -> dict:
     "is_fraud": 1,
     }
 
+# High-Frequency Layered Scammer (Matching C++ Demo Profile)
+def extreme_hybrid_order() -> dict:
+    return {
+        "velocity":         np.random.uniform(15, 30),
+        "priceDeviation":   np.random.uniform(0.01, 0.05),
+        "cancelRate":       np.random.uniform(0.70, 0.95),
+        "sizeRatio":        np.random.uniform(8, 20),
+        "timeBetween":      np.random.uniform(0.0, 0.3),
+        "repeatPriceRate":  np.random.uniform(0.80, 1.0),
+        "is_fraud": 1,
+    }
+
+
 # generate all records
-fraud_generators = [bot_order, spoof_order, wash_order]
+fraud_generators = [bot_order, spoof_order, wash_order, extreme_hybrid_order]
 
 records = [noraml_order() for _ in range(N_NORMAL)]
 
 # cycle through fraud patterns evenly
 for i in range(N_FRAUD):
-    generate_func = fraud_generators[i % 3]
+    generate_func = fraud_generators[i % len(fraud_generators)]
     records.append(generate_func())
 
 # shuffle so fraud isn't all at end 

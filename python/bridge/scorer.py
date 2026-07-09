@@ -10,6 +10,7 @@ from python.utils.validators import validate_features
 from python.utils.logger import get_logger
 from python.models.explain import explain_text
 
+load_models()
 log = get_logger("scorer")
 
 def write(payload: dict):
@@ -20,7 +21,7 @@ def write(payload: dict):
 
 def main():
    
-    log.info("Loadinf mmodels......")
+    log.info("Loading models......")
     try:
         load_models()
     except Exception as e:

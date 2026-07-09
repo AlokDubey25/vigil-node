@@ -1,9 +1,10 @@
 {
-    "fraud_threshold"         :  0.80,
+    "fraud_threshold"         :  0.35,
     "window_size"             :  100,
     "db_path"                 :  "vigil.db",
     "model_path"              :  "models/saved/",
     "log_level"               :  "INFO",
+    "bridge_threshold"        :  0.80,
     "bridge_timeout_ms"       :  3000,
     "blacklist_warn_threshold":  1,
     "blacklist_temp_threshold":  3,
