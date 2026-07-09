@@ -14,12 +14,11 @@ log = get_logger("scorer")
 
 def write(payload: dict):
     try:
-        print(json.dumps({"ready": True}), flush=True)
+        print(json.dumps(payload), flush=True)
     except BrokenPipeError:
         pass
 
 def main():
-    # Startip : load models
    
     log.info("Loadinf mmodels......")
     try:
@@ -30,7 +29,7 @@ def main():
         sys.exit(1)
 
     # send ready signal - Cpp waits for this before sending order
-    write({"ready": True})
+    print("READY", flush=True)
     log.info("Scorer ready - waiting for feature vectors")
 
     # main loop: one feature vector in, one score out

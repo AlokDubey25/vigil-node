@@ -20,7 +20,8 @@ using namespace std;
 
 int  runHistory(int argc, char* argv[]);
 int  runReset();
-int  runBenchmark(int argc, char* argv[]);                          
+int  runBenchmark(int argc, char* argv[]);      
+int  runExplain(int argc, char* argv[]);                    
 void runInteractive(DatabaseHandler& db,  
                      Bridge& bridge, OrderBook& book,
                      FeatureExtractor& extractor, Graph& tradeGraph,
@@ -58,6 +59,7 @@ void printUsage() {
          << "  run           run the demo order set\n"
          << "  interactive   guided menu — buy, sell, deposit, withdraw, and more\n"
          << "  history <uid> last 10 transactions for a user\n"
+         << "  explain <oid> fetch SHAP attribution plots for a specific order ID\n"
          << "  reset         wipe vigil.db and start fresh\n"
          << "  --help        this message\n"  
          << "  benchmark [--n N]  measure orders/sec at each pipeline stage\n"; 
@@ -68,10 +70,11 @@ int main(int argc, char* argv[]){
     if (argc < 2) { printUsage(); return 1; }
 
     string cmd = argv[1];
-    if (cmd == "history")     return runHistory(argc, argv);
+    if (cmd == "history")   return runHistory(argc, argv);
     if (cmd == "benchmark") return runBenchmark(argc, argv);
-    if (cmd == "reset")       return runReset();      
-    if (cmd == "--help")      { printUsage(); return 0; }
+    if (cmd == "reset")     return runReset();   
+    if (cmd == "explain")   return runExplain(argc, argv);   
+    if (cmd == "--help")    { printUsage(); return 0; }
     if (cmd != "run" && cmd != "interactive") {
         cerr<< Color::red("[ERROR] unknown command: " + cmd) << "\n";
         printUsage(); return 1;
@@ -365,6 +368,39 @@ int runBenchmark(int argc, char* argv[]) {
     return 0;
 }
 
+int runExplain(int argc, char* argv[]) {
+    if (argc < 3) {
+        cerr << Color::red("[ERROR] usage: ./build/vigil explain <orderID>") << "\n";
+        return 1;
+    }
+
+    int targetOrderID = stoi(argv[2]);
+    DatabaseHandler db("vigil.db");
+    if (!db.isOpen()) return 1;
+
+    Config cfg("config/settings.json");
+    int explicitTimeout = 3000;
+    Bridge bridge(".venv/bin/python3 python/bridge/scorer.py", explicitTimeout);    
+    if (!bridge.isReady()) {
+        cerr << Color::red("[ERROR] Cannot run explanation. Python backend bridge not responding.") << "\n";
+        return 1;
+    }
+
+   string samplePayload = "{\"orderID\":" + to_string(targetOrderID) + ", \"request\":\"explain\"}";
+    
+    cout << Color::cyan("[EXPLAIN] Querying SHAP attributions for order " + to_string(targetOrderID) + "...") << "\n";
+    bridge.score(samplePayload); // Triggers model evaluation & extraction sequence
+    
+    string explanation = bridge.getLastExplanation();
+    if (!explanation.empty()) {
+        cout << "\n" << Color::bold("=== SHAP Model Decision Breakdown ===") << "\n";
+        cout << Color::green(explanation) << "\n";
+    } else {
+        cout << Color::yellow("[WARN] No attribution breakdown returned from model bridge.") << "\n";
+    }
+
+    return 0;
+}
 
 Order makeOrder(int id, const string& user,
                 double price, int qty,const string& side){

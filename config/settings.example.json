@@ -4,7 +4,7 @@
     "db_path"                 :  "vigil.db",
     "model_path"              :  "models/saved/",
     "log_level"               :  "INFO",
-    "bridge_timeout_ms"       :  500,
+    "bridge_timeout_ms"       :  3000,
     "blacklist_warn_threshold":  1,
     "blacklist_temp_threshold":  3,
     "blacklist_perm_threshold":  5,
